@@ -1,9 +1,14 @@
 package com.focustimer.app.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,17 +19,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -40,8 +49,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -71,6 +87,9 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
+            // The dial makes this screen tall enough to overflow a small phone, so it scrolls;
+            // Center still applies while the content is shorter than the viewport.
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -80,12 +99,15 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFFFCDD2))
+                    .background(MaterialTheme.colorScheme.errorContainer)
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Окно пропущено — вас уведомили", color = Color(0xFFB71C1C))
+                Text(
+                    "Окно пропущено — вас уведомили",
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
                 TextButton(onClick = { viewModel.acknowledge() }) {
                     Text("Я тут")
                 }
@@ -139,14 +161,6 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        Text(
-            text = if (state.phase == TimerPhase.WORK) "Работа" else "Отдых",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (state.phase == TimerPhase.WORK) WorkColor else RestColor,
-            modifier = Modifier.padding(top = 16.dp)
-        )
-
         if (categories.isNotEmpty()) {
             DropdownField(
                 label = "Чем занимаетесь",
@@ -156,20 +170,35 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(top = 12.dp)
             )
         }
-        Text(
-            text = "%02d:%02d".format(minutes, seconds),
-            fontSize = 64.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 24.dp)
+
+        val phaseMinutes = if (state.phase == TimerPhase.WORK) state.workMinutes else state.restMinutes
+        val phaseSeconds = phaseMinutes * 60
+        TimerDial(
+            // Fraction of the phase still to go, so the ring empties as the time runs out.
+            fraction = if (phaseSeconds > 0) state.secondsLeft.toFloat() / phaseSeconds else 0f,
+            phaseLabel = if (state.phase == TimerPhase.WORK) "Работа" else "Отдых",
+            timeText = "%02d:%02d".format(minutes, seconds),
+            phaseColor = if (state.phase == TimerPhase.WORK) WorkColor else RestColor,
+            modifier = Modifier.padding(vertical = 20.dp)
         )
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Button(onClick = { if (state.isRunning) viewModel.pause() else viewModel.start() }) {
-                Text(if (state.isRunning) "Пауза" else "Старт")
-            }
-            OutlinedButton(onClick = { viewModel.stop() }) {
-                Text("Стоп")
-            }
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            DialAction(
+                icon = Icons.Default.Stop,
+                label = "Стоп",
+                onClick = { viewModel.stop() },
+                primary = false
+            )
+            Spacer(modifier = Modifier.width(32.dp))
+            DialAction(
+                icon = if (state.isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                label = if (state.isRunning) "Пауза" else "Старт",
+                onClick = { if (state.isRunning) viewModel.pause() else viewModel.start() },
+                primary = true
+            )
         }
 
         var showCommentEditor by remember { mutableStateOf(false) }
@@ -465,4 +494,106 @@ private fun PresetEditDialog(
             }
         }
     )
+}
+
+/**
+ * The countdown as a ring that drains over the phase. [fraction] is the share of the phase still
+ * left, so a full ring means the phase has just begun.
+ */
+@Composable
+private fun TimerDial(
+    fraction: Float,
+    phaseLabel: String,
+    timeText: String,
+    phaseColor: Color,
+    modifier: Modifier = Modifier
+) {
+    // Animating the sweep keeps the ring from stepping a visible notch every second.
+    val sweep by animateFloatAsState(
+        targetValue = fraction.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        label = "timerSweep"
+    )
+    Box(modifier = modifier.size(248.dp), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val stroke = 18.dp.toPx()
+            val inset = stroke / 2
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            drawArc(
+                color = phaseColor.copy(alpha = 0.15f),
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(width = stroke)
+            )
+            drawArc(
+                color = phaseColor,
+                startAngle = -90f,
+                sweepAngle = 360f * sweep,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                phaseLabel,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = phaseColor
+            )
+            Text(
+                timeText,
+                fontSize = 56.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+    }
+}
+
+/** A round tap target with its name underneath, so the icon never has to carry the meaning alone. */
+@Composable
+private fun DialAction(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    primary: Boolean
+) {
+    val haptics = LocalHapticFeedback.current
+    val diameter = if (primary) 76.dp else 58.dp
+    val background =
+        if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+    val foreground =
+        if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(diameter)
+                .clip(CircleShape)
+                .background(background)
+                .clickable {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = label,
+                tint = foreground,
+                modifier = Modifier.size(if (primary) 34.dp else 24.dp)
+            )
+        }
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+    }
 }
