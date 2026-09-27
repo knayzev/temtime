@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -238,6 +239,25 @@ fun DayPlanScreen(
                 draftName = draftName,
                 customTitle = customTitle,
                 customDuration = customDuration,
+                professionName = prefs.profession,
+                professionSummary = presetForProfession(prefs.profession).summary,
+                planHints = planItemsFor(prefs.profession, prefs.professionDetails)
+                    .mapNotNull { it.hint }
+                    .distinctBy { it.text },
+                onGenerateFromProfession = {
+                    val stamp = System.currentTimeMillis()
+                    draftTasks = planItemsFor(prefs.profession, prefs.professionDetails)
+                        .mapIndexed { index, item ->
+                            PlanTask(
+                                id = "plantask_prof_${stamp}_$index",
+                                title = item.title,
+                                durationMinutes = item.durationMinutes
+                            )
+                        }
+                    if (draftName.isBlank()) {
+                        draftName = "День · " + presetForProfession(prefs.profession).name
+                    }
+                },
                 onNameChange = { draftName = it },
                 onCustomTitleChange = { customTitle = it },
                 onCustomDurationChange = { customDuration = it },
@@ -404,6 +424,10 @@ private fun PlanBuilder(
     draftName: String,
     customTitle: String,
     customDuration: String,
+    professionName: String,
+    professionSummary: String,
+    planHints: List<PlanHint>,
+    onGenerateFromProfession: () -> Unit,
     onNameChange: (String) -> Unit,
     onCustomTitleChange: (String) -> Unit,
     onCustomDurationChange: (String) -> Unit,
@@ -416,9 +440,84 @@ private fun PlanBuilder(
 ) {
     val addedIds = draftTasks.map { it.id }.toSet()
     val available = PLAN_TASK_LIBRARY.filter { it.id !in addedIds }
+    val uriHandler = LocalUriHandler.current
 
     Column(modifier = Modifier.padding(top = 16.dp)) {
-        Text("Готовые действия", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        // Profession-based generation sits above the manual tools: it fills the draft in one tap,
+        // and everything below still works for editing it or building from scratch.
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "План под вашу специальность",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    if (professionName.isBlank()) "Специальность не выбрана" else professionName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                if (professionSummary.isNotBlank()) {
+                    Text(
+                        professionSummary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                Button(
+                    onClick = onGenerateFromProfession,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                ) {
+                    Text(if (draftTasks.isEmpty()) "Сгенерировать план" else "Сгенерировать заново")
+                }
+            }
+        }
+
+        if (planHints.isNotEmpty()) {
+            Text(
+                "Почему так",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+            planHints.forEach { hint ->
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text(hint.text, style = MaterialTheme.typography.bodySmall)
+                    if (hint.source.isNotBlank()) {
+                        Text(
+                            hint.source,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(top = 2.dp)
+                                .then(
+                                    if (hint.url.isNotBlank()) {
+                                        Modifier.clickable { uriHandler.openUri(hint.url) }
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        )
+                    }
+                }
+            }
+        }
+
+        Text(
+            "Готовые действия",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp)
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()

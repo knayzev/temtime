@@ -33,29 +33,87 @@ data class DayPlan(
     val isEmpty: Boolean get() = tasks.isBlank() && priority.isBlank() && dontForget.isBlank()
 }
 
+/** Ritual periods. Stored as plain strings so old saved data keeps parsing. */
+const val RITUAL_MORNING = "morning"
+const val RITUAL_DAY = "day"
+const val RITUAL_EVENING = "evening"
+const val RITUAL_NIGHT = "night"
+
+val RITUAL_PERIODS = listOf(RITUAL_MORNING, RITUAL_DAY, RITUAL_EVENING, RITUAL_NIGHT)
+
+fun ritualPeriodTitle(period: String): String = when (period) {
+    RITUAL_DAY -> "День"
+    RITUAL_EVENING -> "Вечер"
+    RITUAL_NIGHT -> "Перед сном"
+    else -> "Утро"
+}
+
+fun ritualPeriodEmoji(period: String): String = when (period) {
+    RITUAL_DAY -> "☀️"
+    RITUAL_EVENING -> "🌆"
+    RITUAL_NIGHT -> "🌙"
+    else -> "🌅"
+}
+
 data class RoutineTask(
     val id: String,
     val title: String,
     val icon: String = "✅",
-    val durationMinutes: Int = 0
+    val durationMinutes: Int = 0,
+    val period: String = RITUAL_MORNING
 )
 
 val ROUTINE_TASK_LIBRARY = listOf(
-    RoutineTask("routine_wake7", "Проснуться в 7 утра", "⏰", 0),
-    RoutineTask("routine_lie5", "Полежать 5 минут", "🛌", 5),
-    RoutineTask("routine_sit5", "Посидеть 5 минут", "🧘", 5),
-    RoutineTask("routine_exercise", "Сделать зарядку", "🤸", 10),
-    RoutineTask("routine_teeth", "Почистить зубы", "🪥", 3),
-    RoutineTask("routine_water", "Выпить стакан воды", "💧", 1),
-    RoutineTask("routine_walk", "Прогуляться", "🚶", 15),
-    RoutineTask("routine_stretch", "Растяжка", "🤾", 10),
-    RoutineTask("routine_shower", "Принять душ", "🚿", 10),
-    RoutineTask("routine_breakfast", "Позавтракать", "🍳", 15),
-    RoutineTask("routine_journal", "Записать мысли в дневник", "📓", 5),
-    RoutineTask("routine_plan", "Составить план на день", "📝", 5)
+    // Утро
+    RoutineTask("routine_wake7", "Проснуться в 7 утра", "⏰", 0, RITUAL_MORNING),
+    RoutineTask("routine_lie5", "Полежать 5 минут", "🛌", 5, RITUAL_MORNING),
+    RoutineTask("routine_sit5", "Посидеть 5 минут", "🧘", 5, RITUAL_MORNING),
+    RoutineTask("routine_water", "Выпить стакан воды", "💧", 1, RITUAL_MORNING),
+    RoutineTask("routine_exercise", "Сделать зарядку", "🤸", 10, RITUAL_MORNING),
+    RoutineTask("routine_teeth", "Почистить зубы", "🪥", 3, RITUAL_MORNING),
+    RoutineTask("routine_shower", "Принять душ", "🚿", 10, RITUAL_MORNING),
+    RoutineTask("routine_breakfast", "Позавтракать", "🍳", 15, RITUAL_MORNING),
+    RoutineTask("routine_stretch", "Растяжка", "🤾", 10, RITUAL_MORNING),
+    RoutineTask("routine_journal", "Записать мысли в дневник", "📓", 5, RITUAL_MORNING),
+    RoutineTask("routine_plan", "Составить план на день", "📝", 5, RITUAL_MORNING),
+    RoutineTask("routine_standup", "Утренний созвон", "📞", 15, RITUAL_MORNING),
+
+    // День
+    RoutineTask("routine_deepwork", "Блок глубокой работы", "🎯", 50, RITUAL_DAY),
+    RoutineTask("routine_break", "Перерыв без экрана", "☕", 10, RITUAL_DAY),
+    RoutineTask("routine_lunch", "Пообедать", "🍽️", 30, RITUAL_DAY),
+    RoutineTask("routine_daywalk", "Выйти на воздух", "🌤️", 15, RITUAL_DAY),
+    RoutineTask("routine_inbox", "Разобрать почту и сообщения", "📥", 20, RITUAL_DAY),
+    RoutineTask("routine_eyes", "Гимнастика для глаз", "👀", 2, RITUAL_DAY),
+    RoutineTask("routine_water_day", "Стакан воды", "💧", 1, RITUAL_DAY),
+
+    // Вечер
+    RoutineTask("routine_dinner", "Поужинать", "🍲", 30, RITUAL_EVENING),
+    RoutineTask("routine_evwalk", "Вечерняя прогулка", "🚶", 20, RITUAL_EVENING),
+    RoutineTask("routine_tidy", "Прибраться на столе", "🧹", 10, RITUAL_EVENING),
+    RoutineTask("routine_review", "Подвести итоги дня", "✅", 10, RITUAL_EVENING),
+    RoutineTask("routine_planned", "Спланировать завтра", "🗓️", 10, RITUAL_EVENING),
+    RoutineTask("routine_family", "Время с близкими", "❤️", 30, RITUAL_EVENING),
+
+    // Перед сном
+    RoutineTask("routine_noscreen", "Убрать телефон", "📵", 0, RITUAL_NIGHT),
+    RoutineTask("routine_warmshower", "Тёплый душ", "🛁", 15, RITUAL_NIGHT),
+    RoutineTask("routine_air", "Проветрить спальню", "🪟", 10, RITUAL_NIGHT),
+    RoutineTask("routine_read", "Чтение книги", "📖", 20, RITUAL_NIGHT),
+    RoutineTask("routine_brain_dump", "Выписать тревожные мысли", "📝", 5, RITUAL_NIGHT),
+    RoutineTask("routine_breath", "Дыхание 4-7-8", "🌬️", 5, RITUAL_NIGHT),
+    RoutineTask("routine_bed", "Отбой", "😴", 0, RITUAL_NIGHT)
 )
 
-val DEFAULT_ROUTINE_TASKS = ROUTINE_TASK_LIBRARY.take(5)
+fun routineLibraryFor(period: String): List<RoutineTask> =
+    ROUTINE_TASK_LIBRARY.filter { it.period == period }
+
+val DEFAULT_ROUTINE_TASKS = listOf(
+    "routine_wake7", "routine_water", "routine_exercise", "routine_teeth", "routine_breakfast",
+    "routine_deepwork", "routine_lunch", "routine_daywalk",
+    "routine_dinner", "routine_review", "routine_planned",
+    "routine_noscreen", "routine_air", "routine_bed"
+).mapNotNull { id -> ROUTINE_TASK_LIBRARY.firstOrNull { it.id == id } }
 
 data class PlanTask(
     val id: String,
@@ -117,6 +175,36 @@ class PrefsManager(context: Context) {
     var lastName: String
         get() = prefs.getString(KEY_LAST_NAME, "") ?: ""
         set(value) = prefs.edit().putString(KEY_LAST_NAME, value).apply()
+
+    /** Drives which day-plan preset and advice the generator picks. */
+    var profession: String
+        get() = prefs.getString(KEY_PROFESSION, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_PROFESSION, value).apply()
+
+    /** Free-form extra context the user adds on top of the profession. */
+    var professionDetails: String
+        get() = prefs.getString(KEY_PROFESSION_DETAILS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_PROFESSION_DETAILS, value).apply()
+
+    /**
+     * Two productivity windows the day is measured in. Stats are grouped by these instead of
+     * one flat daily total, so a morning block and an afternoon block can be compared.
+     */
+    var focusWindowOneStart: String
+        get() = prefs.getString(KEY_FOCUS_W1_START, "08:00") ?: "08:00"
+        set(value) = prefs.edit().putString(KEY_FOCUS_W1_START, value).apply()
+
+    var focusWindowOneEnd: String
+        get() = prefs.getString(KEY_FOCUS_W1_END, "15:00") ?: "15:00"
+        set(value) = prefs.edit().putString(KEY_FOCUS_W1_END, value).apply()
+
+    var focusWindowTwoStart: String
+        get() = prefs.getString(KEY_FOCUS_W2_START, "15:30") ?: "15:30"
+        set(value) = prefs.edit().putString(KEY_FOCUS_W2_START, value).apply()
+
+    var focusWindowTwoEnd: String
+        get() = prefs.getString(KEY_FOCUS_W2_END, "19:00") ?: "19:00"
+        set(value) = prefs.edit().putString(KEY_FOCUS_W2_END, value).apply()
 
     var dataConsentGiven: Boolean
         get() = prefs.getBoolean(KEY_DATA_CONSENT, false)
@@ -337,11 +425,18 @@ class PrefsManager(context: Context) {
                 val array = JSONArray(raw)
                 (0 until array.length()).map { i ->
                     val obj = array.getJSONObject(i)
+                    val id = obj.getString("id")
                     RoutineTask(
-                        id = obj.getString("id"),
+                        id = id,
                         title = obj.getString("title"),
                         icon = obj.optString("icon", "✅"),
-                        durationMinutes = obj.optInt("durationMinutes", 0)
+                        durationMinutes = obj.optInt("durationMinutes", 0),
+                        // Tasks saved before ritual periods existed carry no field; fall back to
+                        // the library entry so they land in the right section instead of all-morning.
+                        period = obj.optString(
+                            "period",
+                            ROUTINE_TASK_LIBRARY.firstOrNull { it.id == id }?.period ?: RITUAL_MORNING
+                        )
                     )
                 }
             } catch (_: Exception) {
@@ -357,6 +452,7 @@ class PrefsManager(context: Context) {
                         put("title", task.title)
                         put("icon", task.icon)
                         put("durationMinutes", task.durationMinutes)
+                        put("period", task.period)
                     }
                 )
             }
@@ -649,6 +745,12 @@ class PrefsManager(context: Context) {
         val profile = JSONObject().apply {
             put("userName", userName)
             put("lastName", lastName)
+            put("profession", profession)
+            put("professionDetails", professionDetails)
+            put("focusWindowOneStart", focusWindowOneStart)
+            put("focusWindowOneEnd", focusWindowOneEnd)
+            put("focusWindowTwoStart", focusWindowTwoStart)
+            put("focusWindowTwoEnd", focusWindowTwoEnd)
             put("email", email)
             put("dataConsentGiven", dataConsentGiven)
             put("weightKg", weightKg)
@@ -689,6 +791,12 @@ class PrefsManager(context: Context) {
             root.optJSONObject("profile")?.let { profile ->
                 userName = profile.optString("userName", userName)
                 lastName = profile.optString("lastName", lastName)
+                profession = profile.optString("profession", profession)
+                professionDetails = profile.optString("professionDetails", professionDetails)
+                focusWindowOneStart = profile.optString("focusWindowOneStart", focusWindowOneStart)
+                focusWindowOneEnd = profile.optString("focusWindowOneEnd", focusWindowOneEnd)
+                focusWindowTwoStart = profile.optString("focusWindowTwoStart", focusWindowTwoStart)
+                focusWindowTwoEnd = profile.optString("focusWindowTwoEnd", focusWindowTwoEnd)
                 email = profile.optString("email", email)
                 dataConsentGiven = profile.optBoolean("dataConsentGiven", dataConsentGiven)
                 weightKg = profile.optString("weightKg", weightKg)
@@ -742,6 +850,12 @@ class PrefsManager(context: Context) {
     companion object {
         private const val MAX_HISTORY_ENTRIES = 300
         private const val KEY_NAME = "user_name"
+        private const val KEY_PROFESSION = "profession"
+        private const val KEY_PROFESSION_DETAILS = "profession_details"
+        private const val KEY_FOCUS_W1_START = "focus_w1_start"
+        private const val KEY_FOCUS_W1_END = "focus_w1_end"
+        private const val KEY_FOCUS_W2_START = "focus_w2_start"
+        private const val KEY_FOCUS_W2_END = "focus_w2_end"
         private const val KEY_PHOTO = "photo_uri"
         private const val KEY_WORK_MIN = "work_minutes"
         private const val KEY_REST_MIN = "rest_minutes"

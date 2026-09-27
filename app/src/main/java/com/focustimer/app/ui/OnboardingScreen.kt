@@ -56,6 +56,12 @@ fun OnboardingScreen(onComplete: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 
+    var userName by remember { mutableStateOf(prefs.userName) }
+    var profession by remember {
+        mutableStateOf(prefs.profession.ifBlank { PROFESSION_PRESETS.first().name })
+    }
+    var professionDetails by remember { mutableStateOf(prefs.professionDetails) }
+
     var weightKg by remember { mutableStateOf(prefs.weightKg) }
     var heightCm by remember { mutableStateOf(prefs.heightCm) }
     var age by remember { mutableStateOf(prefs.age) }
@@ -99,6 +105,51 @@ fun OnboardingScreen(onComplete: () -> Unit, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
         )
+
+        SectionTitle("Как вас зовут")
+        OutlinedTextField(
+            value = userName,
+            onValueChange = { userName = it; prefs.userName = it },
+            label = { Text("Имя") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp)
+        )
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+        SectionTitle("Чем вы занимаетесь")
+        Text(
+            "По профессии подберём план дня: что ставить на пик концентрации, а что — после обеда",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        DropdownField(
+            label = "Специальность",
+            selected = profession,
+            options = PROFESSION_PRESETS.map { it.name },
+            onSelected = { profession = it; prefs.profession = it }
+        )
+        Text(
+            presetForProfession(profession).summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+        OutlinedTextField(
+            value = professionDetails,
+            onValueChange = { professionDetails = it; prefs.professionDetails = it },
+            label = { Text("Что добавить к плану (необязательно)") },
+            placeholder = { Text("Например: каждый вторник двухчасовая планёрка") },
+            minLines = 2,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+        )
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
 
         SectionTitle("О себе")
         Row(modifier = Modifier.fillMaxWidth()) {

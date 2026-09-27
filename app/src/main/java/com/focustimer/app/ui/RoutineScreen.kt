@@ -52,8 +52,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focustimer.app.PrefsManager
+import com.focustimer.app.RITUAL_PERIODS
 import com.focustimer.app.ROUTINE_TASK_LIBRARY
 import com.focustimer.app.RoutineTask
+import com.focustimer.app.ritualPeriodEmoji
+import com.focustimer.app.ritualPeriodTitle
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -183,27 +186,50 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         }
 
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            Text(
-                "Утренняя рутина",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            // One section per ritual period. The colour index stays global so the alternating
+            // rhythm doesn't restart in every section.
+            RITUAL_PERIODS.forEach { period ->
+                val periodTasks = tasks.filter { it.period == period }
+                if (periodTasks.isEmpty()) return@forEach
 
-            tasks.forEachIndexed { index, task ->
-                RoutineRow(
-                    task = task,
-                    index = index,
-                    isDone = completedIds.contains(task.id),
-                    streak = prefs.routineStreak(task.id, todayKey, previousDates),
-                    interactive = isToday,
-                    onToggle = {
-                        val newDone = !completedIds.contains(task.id)
-                        prefs.setRoutineTaskDone(selectedDate, task.id, newDone)
-                        completedIds = prefs.getCompletedRoutineIds(selectedDate)
-                    },
-                    onLongPress = { taskPendingDelete = task }
-                )
+                val periodMinutes = periodTasks.sumOf { it.durationMinutes }
+                val periodDone = periodTasks.count { completedIds.contains(it.id) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        ritualPeriodEmoji(period) + "  " + ritualPeriodTitle(period),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "$periodDone/${periodTasks.size}" +
+                            if (periodMinutes > 0) " · $periodMinutes мин" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                periodTasks.forEach { task ->
+                    RoutineRow(
+                        task = task,
+                        index = tasks.indexOfFirst { it.id == task.id },
+                        isDone = completedIds.contains(task.id),
+                        streak = prefs.routineStreak(task.id, todayKey, previousDates),
+                        interactive = isToday,
+                        onToggle = {
+                            val newDone = !completedIds.contains(task.id)
+                            prefs.setRoutineTaskDone(selectedDate, task.id, newDone)
+                            completedIds = prefs.getCompletedRoutineIds(selectedDate)
+                        },
+                        onLongPress = { taskPendingDelete = task }
+                    )
+                }
             }
 
             Surface(

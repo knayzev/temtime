@@ -41,12 +41,41 @@ fun StatsScreen(modifier: Modifier = Modifier) {
 
     val todayStart = remember { startOfDay(System.currentTimeMillis()) }
     val weekStart = remember { todayStart - 6L * DAY_MILLIS }
+    val monthStart = remember { startOfMonth(System.currentTimeMillis()) }
 
     val todaySeconds = remember(workEntries) {
         workEntries.filter { it.startTimeMillis >= todayStart }.sumOf { it.durationSeconds }
     }
     val weekSeconds = remember(workEntries) {
         workEntries.filter { it.startTimeMillis >= weekStart }.sumOf { it.durationSeconds }
+    }
+    val monthSeconds = remember(workEntries) {
+        workEntries.filter { it.startTimeMillis >= monthStart }.sumOf { it.durationSeconds }
+    }
+
+    // Two productivity windows, classified by when a session started.
+    val windows = remember {
+        listOf(
+            FocusWindow("Первая половина", prefs.focusWindowOneStart, prefs.focusWindowOneEnd),
+            FocusWindow("Вторая половина", prefs.focusWindowTwoStart, prefs.focusWindowTwoEnd)
+        )
+    }
+    val windowStats = remember(workEntries, windows) {
+        windows.map { window ->
+            val inWindow = workEntries.filter { window.contains(minutesOfDay(it.startTimeMillis)) }
+            WindowStats(
+                window = window,
+                today = inWindow.filter { it.startTimeMillis >= todayStart }.sumOf { it.durationSeconds },
+                week = inWindow.filter { it.startTimeMillis >= weekStart }.sumOf { it.durationSeconds },
+                month = inWindow.filter { it.startTimeMillis >= monthStart }.sumOf { it.durationSeconds }
+            )
+        }
+    }
+    val outsideMonth = remember(workEntries, windows) {
+        workEntries
+            .filter { it.startTimeMillis >= monthStart }
+            .filterNot { entry -> windows.any { it.contains(minutesOfDay(entry.startTimeMillis)) } }
+            .sumOf { it.durationSeconds }
     }
     val completedCount = remember(workEntries) { workEntries.count { !it.interrupted } }
     val totalCount = workEntries.size
@@ -74,10 +103,38 @@ fun StatsScreen(modifier: Modifier = Modifier) {
 
         StatRow("Сегодня", formatDuration(todaySeconds))
         StatRow("За неделю", formatDuration(weekSeconds))
+        StatRow("За месяц", formatDuration(monthSeconds))
         StatRow("Завершено сессий", "$completedCount из $totalCount")
         StatRow("Текущий стрик", "$streak ${daysWord(streak)}")
         if (prefs.stepsEnabled) {
             StatRow("Шаги сегодня", liveSteps?.toString() ?: "…")
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+        Text("Окна продуктивности", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Сегодня · неделя · месяц",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+        )
+        windowStats.forEach { stats ->
+            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                Text(
+                    "${stats.window.label} · ${stats.window.start}–${stats.window.end}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    formatDuration(stats.today) + "  ·  " +
+                        formatDuration(stats.week) + "  ·  " +
+                        formatDuration(stats.month),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (outsideMonth > 0) {
+            StatRow("Вне окон, за месяц", formatDuration(outsideMonth))
         }
 
         if (categoryBreakdown.isNotEmpty()) {
@@ -135,6 +192,46 @@ private fun AchievementRow(achievement: Achievement) {
 }
 
 private const val DAY_MILLIS = 24L * 60 * 60 * 1000
+
+/** A productivity window, compared against the minute-of-day a session started at. */
+private data class FocusWindow(val label: String, val start: String, val end: String) {
+    private val startMinutes = parseTimeToMinutes(start)
+    private val endMinutes = parseTimeToMinutes(end)
+
+    fun contains(minuteOfDay: Int): Boolean =
+        minuteOfDay >= startMinutes && minuteOfDay < endMinutes
+}
+
+private data class WindowStats(
+    val window: FocusWindow,
+    val today: Int,
+    val week: Int,
+    val month: Int
+)
+
+private fun parseTimeToMinutes(text: String): Int {
+    val parts = text.split(":")
+    val hours = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: 0
+    val minutes = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+    return hours * 60 + minutes
+}
+
+private fun minutesOfDay(millis: Long): Int {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = millis
+    return calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+}
+
+private fun startOfMonth(millis: Long): Long {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = millis
+    calendar.set(Calendar.DAY_OF_MONTH, 1)
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    return calendar.timeInMillis
+}
 
 private fun startOfDay(millis: Long): Long {
     val calendar = Calendar.getInstance()
