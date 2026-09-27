@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -37,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +60,7 @@ import com.focustimer.app.ROUTINE_TASK_LIBRARY
 import com.focustimer.app.RoutineTask
 import com.focustimer.app.ritualPeriodEmoji
 import com.focustimer.app.ritualPeriodTitle
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -113,11 +117,76 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     var draftSummary by remember { mutableStateOf(prefs.getDaySummary(selectedDate)) }
     var editingSummary by remember { mutableStateOf(false) }
 
+    // Ritual chain timer: one task runs at a time; when it ends the next timed task in the
+    // same period offers to start, with a short countdown the user can cancel by tapping it.
+    var runningTaskId by remember { mutableStateOf<String?>(null) }
+    var secondsLeft by remember { mutableStateOf(0) }
+    var timerPaused by remember { mutableStateOf(false) }
+    var pendingNextId by remember { mutableStateOf<String?>(null) }
+    var pendingSeconds by remember { mutableStateOf(0) }
+
+    fun stopChain() {
+        runningTaskId = null
+        pendingNextId = null
+        timerPaused = false
+    }
+
+    fun startTask(task: RoutineTask) {
+        if (task.durationMinutes <= 0) return
+        pendingNextId = null
+        runningTaskId = task.id
+        secondsLeft = task.durationMinutes * 60
+        timerPaused = false
+    }
+
+    fun finishRunningTask() {
+        val finishedId = runningTaskId ?: return
+        prefs.setRoutineTaskDone(selectedDate, finishedId, true)
+        completedIds = prefs.getCompletedRoutineIds(selectedDate)
+        runningTaskId = null
+        timerPaused = false
+
+        val finished = tasks.firstOrNull { it.id == finishedId } ?: return
+        val next = tasks
+            .filter { it.period == finished.period && it.durationMinutes > 0 }
+            .dropWhile { it.id != finishedId }
+            .drop(1)
+            .firstOrNull { !completedIds.contains(it.id) }
+        if (next != null) {
+            pendingNextId = next.id
+            pendingSeconds = 5
+        }
+    }
+
     fun switchDate(newDate: String) {
         selectedDate = newDate
         completedIds = prefs.getCompletedRoutineIds(newDate)
         draftSummary = prefs.getDaySummary(newDate)
         editingSummary = false
+        stopChain()
+    }
+
+    LaunchedEffect(runningTaskId, timerPaused) {
+        if (runningTaskId != null && !timerPaused) {
+            while (secondsLeft > 0) {
+                delay(1000)
+                secondsLeft -= 1
+            }
+            finishRunningTask()
+        }
+    }
+
+    LaunchedEffect(pendingNextId) {
+        val queued = pendingNextId
+        if (queued != null) {
+            while (pendingSeconds > 0) {
+                delay(1000)
+                pendingSeconds -= 1
+            }
+            if (pendingNextId == queued) {
+                tasks.firstOrNull { it.id == queued }?.let { startTask(it) }
+            }
+        }
     }
 
     val isToday = selectedDate == todayKey
@@ -207,12 +276,28 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        "$periodDone/${periodTasks.size}" +
-                            if (periodMinutes > 0) " · $periodMinutes мин" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val nextInPeriod = periodTasks.firstOrNull {
+                            it.durationMinutes > 0 && !completedIds.contains(it.id)
+                        }
+                        if (isToday && nextInPeriod != null && runningTaskId == null) {
+                            Text(
+                                "▶ Запустить",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clickable { startTask(nextInPeriod) }
+                                    .padding(end = 10.dp)
+                            )
+                        }
+                        Text(
+                            "$periodDone/${periodTasks.size}" +
+                                if (periodMinutes > 0) " · $periodMinutes мин" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 periodTasks.forEach { task ->
@@ -224,10 +309,20 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         interactive = isToday,
                         onToggle = {
                             val newDone = !completedIds.contains(task.id)
+                            // Ticking the running task by hand ends its timer instead of
+                            // leaving a countdown attached to something already done.
+                            if (newDone && runningTaskId == task.id) stopChain()
+                            if (pendingNextId == task.id) pendingNextId = null
                             prefs.setRoutineTaskDone(selectedDate, task.id, newDone)
                             completedIds = prefs.getCompletedRoutineIds(selectedDate)
                         },
-                        onLongPress = { taskPendingDelete = task }
+                        onLongPress = { taskPendingDelete = task },
+                        isRunning = runningTaskId == task.id,
+                        isPaused = timerPaused,
+                        secondsLeft = if (runningTaskId == task.id) secondsLeft else 0,
+                        startsInSeconds = if (pendingNextId == task.id) pendingSeconds else 0,
+                        onStart = { startTask(task) },
+                        onPauseToggle = { timerPaused = !timerPaused }
                     )
                 }
             }
@@ -420,7 +515,13 @@ private fun RoutineRow(
     streak: Int,
     interactive: Boolean,
     onToggle: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    isRunning: Boolean = false,
+    isPaused: Boolean = false,
+    secondsLeft: Int = 0,
+    startsInSeconds: Int = 0,
+    onStart: (() -> Unit)? = null,
+    onPauseToggle: (() -> Unit)? = null
 ) {
     val containerColor = when (index % 3) {
         0 -> MaterialTheme.colorScheme.primaryContainer
@@ -468,13 +569,59 @@ private fun RoutineRow(
                     )
                 }
                 if (task.durationMinutes > 0) {
+                    val timing = when {
+                        isRunning -> formatClock(secondsLeft) + if (isPaused) " · пауза" else ""
+                        startsInSeconds > 0 -> "старт через $startsInSeconds"
+                        else -> "${task.durationMinutes} мин"
+                    }
                     Text(
-                        if (streak > 0) " · ${task.durationMinutes} мин" else "${task.durationMinutes} мин",
+                        if (streak > 0) " · $timing" else timing,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isRunning || startsInSeconds > 0) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        fontWeight = if (isRunning) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
+        }
+
+        // Timer control only makes sense for tasks that carry a duration; a 0-minute task
+        // like "отбой" is just a checkbox.
+        if (task.durationMinutes > 0 && !isDone && interactive) {
+            Surface(
+                shape = CircleShape,
+                color = if (isRunning) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                modifier = Modifier
+                    .size(32.dp)
+                    .clickable {
+                        if (isRunning) onPauseToggle?.invoke() else onStart?.invoke()
+                    }
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = if (isRunning && !isPaused) {
+                            Icons.Default.Pause
+                        } else {
+                            Icons.Default.PlayArrow
+                        },
+                        contentDescription = if (isRunning) "Пауза" else "Запустить таймер",
+                        tint = if (isRunning) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Box(modifier = Modifier.size(8.dp))
         }
 
         Surface(
@@ -606,6 +753,11 @@ private fun ModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
             )
         }
     }
+}
+
+private fun formatClock(totalSeconds: Int): String {
+    val safe = if (totalSeconds < 0) 0 else totalSeconds
+    return "%d:%02d".format(safe / 60, safe % 60)
 }
 
 private fun displayDate(dateKey: String): String {
