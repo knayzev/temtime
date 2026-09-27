@@ -4,24 +4,28 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.focustimer.app.PrefsManager
 import com.focustimer.app.SessionRecord
@@ -92,62 +96,142 @@ fun StatsScreen(modifier: Modifier = Modifier) {
         listOf(1, 10, 50, 100, 500).map { Achievement("$it завершённых сессий", completedCount, it) } +
             listOf(3, 7, 30, 100).map { Achievement("Стрик ${it} ${daysWord(it)}", streak, it) }
     }
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        StatRow("Сегодня", formatDuration(todaySeconds))
-        StatRow("За неделю", formatDuration(weekSeconds))
-        StatRow("За месяц", formatDuration(monthSeconds))
-        StatRow("Завершено сессий", "$completedCount из $totalCount")
-        StatRow("Текущий стрик", "$streak ${daysWord(streak)}")
-        if (prefs.stepsEnabled) {
-            StatRow("Шаги сегодня", liveSteps?.toString() ?: "…")
+        // The three totals people actually come here for, big enough to read at a glance.
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HeadlineStat("Сегодня", formatDuration(todaySeconds), Modifier.weight(1f))
+            HeadlineStat("Неделя", formatDuration(weekSeconds), Modifier.weight(1f))
+            HeadlineStat("Месяц", formatDuration(monthSeconds), Modifier.weight(1f))
         }
 
-        Divider(modifier = Modifier.padding(vertical = 16.dp))
-        Text("Окна продуктивности", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "Сегодня · неделя · месяц",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
-        )
-        windowStats.forEach { stats ->
-            Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                Text(
-                    "${stats.window.label} · ${stats.window.start}–${stats.window.end}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    formatDuration(stats.today) + "  ·  " +
-                        formatDuration(stats.week) + "  ·  " +
-                        formatDuration(stats.month),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        StatsCard("Сессии") {
+            StatRow("Завершено", "$completedCount из $totalCount")
+            StatRow("Текущий стрик", "$streak ${daysWord(streak)}")
+            if (prefs.stepsEnabled) {
+                StatRow("Шаги сегодня", liveSteps?.toString() ?: "…")
             }
         }
-        if (outsideMonth > 0) {
-            StatRow("Вне окон, за месяц", formatDuration(outsideMonth))
+
+        StatsCard("Окна продуктивности", "Сегодня · неделя · месяц") {
+            windowStats.forEach { stats ->
+                Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                    Text(
+                        "${stats.window.label} · ${stats.window.start}–${stats.window.end}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        formatDuration(stats.today) + "  ·  " +
+                            formatDuration(stats.week) + "  ·  " +
+                            formatDuration(stats.month),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (outsideMonth > 0) {
+                StatRow("Вне окон, за месяц", formatDuration(outsideMonth))
+            }
         }
 
         if (categoryBreakdown.isNotEmpty()) {
-            Divider(modifier = Modifier.padding(vertical = 16.dp))
-            Text("По категориям", style = MaterialTheme.typography.titleMedium)
-            categoryBreakdown.forEach { (category, seconds) ->
-                StatRow(category, formatDuration(seconds))
+            StatsCard("По категориям") {
+                val largest = categoryBreakdown.first().value.coerceAtLeast(1)
+                categoryBreakdown.forEach { (category, seconds) ->
+                    CategoryBar(category, seconds, largest)
+                }
             }
         }
 
-        Divider(modifier = Modifier.padding(vertical = 16.dp))
-        Text("Достижения", style = MaterialTheme.typography.titleMedium)
-        achievements.forEach { achievement ->
-            AchievementRow(achievement)
+        StatsCard("Достижения") {
+            achievements.forEach { achievement ->
+                AchievementRow(achievement)
+            }
         }
+    }
+}
+
+/** One of the three big totals across the top. */
+@Composable
+private fun HeadlineStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+    }
+}
+
+/** Groups related rows so the screen reads as sections rather than one long list. */
+@Composable
+private fun StatsCard(
+    title: String,
+    subtitle: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Column(modifier = Modifier.padding(top = 8.dp), content = content)
+        }
+    }
+}
+
+/** A category's share of the busiest category, so the split is visible without reading numbers. */
+@Composable
+private fun CategoryBar(category: String, seconds: Int, largestSeconds: Int) {
+    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(category, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                formatDuration(seconds),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        LinearProgressIndicator(
+            progress = (seconds.toFloat() / largestSeconds).coerceIn(0f, 1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+        )
     }
 }
 
@@ -175,7 +259,8 @@ private fun AchievementRow(achievement: Achievement) {
         Icon(
             imageVector = if (achievement.unlocked) Icons.Default.CheckCircle else Icons.Default.Lock,
             contentDescription = null,
-            tint = if (achievement.unlocked) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline
+            tint = if (achievement.unlocked) MaterialTheme.colorScheme.tertiary
+            else MaterialTheme.colorScheme.outline
         )
         Column(modifier = Modifier.padding(start = 12.dp).fillMaxWidth()) {
             Text(achievement.label)
