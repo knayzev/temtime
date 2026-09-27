@@ -7,26 +7,33 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.EventNote
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
@@ -68,6 +76,7 @@ import com.focustimer.app.ui.StatsScreen
 import com.focustimer.app.ui.TimerScreen
 import com.focustimer.app.ui.theme.FocusTimerTheme
 import com.focustimer.app.ui.theme.RestColor
+import com.focustimer.app.ui.theme.ThemeState
 import com.focustimer.app.ui.theme.WorkColor
 
 class MainActivity : ComponentActivity() {
@@ -75,8 +84,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        ThemeState.dynamicColor = PrefsManager(this).dynamicColorEnabled
         setContent {
-            FocusTimerTheme {
+            FocusTimerTheme(dynamicColor = ThemeState.dynamicColor) {
                 RootNavigator(timerViewModel)
             }
         }
@@ -86,6 +97,17 @@ class MainActivity : ComponentActivity() {
 private enum class RootScreen { AUTH, INTRO, ONBOARDING, LIFESTYLE, PLAN_SETUP, MAIN }
 
 private enum class OverlayScreen { ROUTINE }
+
+/** One bottom-bar destination. The filled icon marks the active tab, the outlined one the rest. */
+private data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
+
+private val NAV_ITEMS = listOf(
+    NavItem("Таймер", Icons.Outlined.Timer, Icons.Filled.Timer),
+    NavItem("Планы", Icons.Outlined.EventNote, Icons.Filled.EventNote),
+    NavItem("Статистика", Icons.Outlined.BarChart, Icons.Filled.BarChart),
+    NavItem("Настройки", Icons.Outlined.Settings, Icons.Filled.Settings),
+    NavItem("Профиль", Icons.Outlined.Person, Icons.Filled.Person)
+)
 
 @Composable
 fun RootNavigator(timerViewModel: TimerViewModel) {
@@ -103,20 +125,6 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
     }
 
     when (screen) {
-        RootScreen.AUTH -> AuthScreen(
-            startInLoginMode = prefs.isRegistered,
-            onAuthenticated = {
-                screen = if (prefs.isOnboarded) RootScreen.MAIN else RootScreen.INTRO
-            }
-        )
-        RootScreen.INTRO -> IntroScreen(onContinue = { screen = RootScreen.ONBOARDING })
-        RootScreen.ONBOARDING -> OnboardingScreen(onComplete = { screen = RootScreen.LIFESTYLE })
-        RootScreen.LIFESTYLE -> LifestyleQuestionsScreen(onComplete = { screen = RootScreen.PLAN_SETUP })
-        RootScreen.PLAN_SETUP -> DayPlanScreen(
-            onBack = {},
-            isSetupFlow = true,
-            onSetupComplete = { screen = RootScreen.MAIN }
-        )
         RootScreen.MAIN -> AppRoot(
             timerViewModel = timerViewModel,
             onLogout = {
@@ -124,6 +132,27 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
                 screen = RootScreen.AUTH
             }
         )
+        // The pre-MAIN flow has no Scaffold of its own, so it keeps clear of the system bars
+        // itself now that the activity draws edge to edge.
+        else -> Box(modifier = Modifier.safeDrawingPadding()) {
+            when (screen) {
+                RootScreen.AUTH -> AuthScreen(
+                    startInLoginMode = prefs.isRegistered,
+                    onAuthenticated = {
+                        screen = if (prefs.isOnboarded) RootScreen.MAIN else RootScreen.INTRO
+                    }
+                )
+                RootScreen.INTRO -> IntroScreen(onContinue = { screen = RootScreen.ONBOARDING })
+                RootScreen.ONBOARDING -> OnboardingScreen(onComplete = { screen = RootScreen.LIFESTYLE })
+                RootScreen.LIFESTYLE -> LifestyleQuestionsScreen(onComplete = { screen = RootScreen.PLAN_SETUP })
+                RootScreen.PLAN_SETUP -> DayPlanScreen(
+                    onBack = {},
+                    isSetupFlow = true,
+                    onSetupComplete = { screen = RootScreen.MAIN }
+                )
+                RootScreen.MAIN -> Unit
+            }
+        }
     }
 }
 
@@ -131,10 +160,9 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
 @Composable
 fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Таймер", "Планы", "Статистика", "Настройки", "Профиль")
+    val tabs = NAV_ITEMS.map { it.label }
 
     var overlayScreen by remember { mutableStateOf<OverlayScreen?>(null) }
-    var showAddMenu by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val view = LocalView.current
@@ -176,55 +204,33 @@ fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("EPV") },
+                // Naming the current section here lets each screen drop its own duplicate
+                // headline, which buys back a chunk of vertical space on a phone.
+                title = { Text(if (overlayScreen == OverlayScreen.ROUTINE) "Ритуалы" else tabs[selectedTab]) },
                 actions = {
-                    IconButton(onClick = { showAddMenu = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Добавить")
-                    }
-                    DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Утренняя рутина") },
-                            onClick = {
-                                showAddMenu = false
-                                overlayScreen = OverlayScreen.ROUTINE
-                            }
-                        )
+                    // One destination, so it opens directly instead of through a one-item menu.
+                    IconButton(onClick = { overlayScreen = OverlayScreen.ROUTINE }) {
+                        Icon(Icons.Outlined.Checklist, contentDescription = "Ритуалы")
                     }
                 }
             )
         },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0; overlayScreen = null },
-                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = tabs[0]) },
-                    label = { Text(tabs[0]) }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1; overlayScreen = null },
-                    icon = { Icon(Icons.Default.History, contentDescription = tabs[1]) },
-                    label = { Text(tabs[1]) }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2; overlayScreen = null },
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = tabs[2]) },
-                    label = { Text(tabs[2]) }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { selectedTab = 3; overlayScreen = null },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = tabs[3]) },
-                    label = { Text(tabs[3]) }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 4,
-                    onClick = { selectedTab = 4; overlayScreen = null },
-                    icon = { Icon(Icons.Default.Person, contentDescription = tabs[4]) },
-                    label = { Text(tabs[4]) }
-                )
+                NAV_ITEMS.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        selected = selectedTab == index && overlayScreen == null,
+                        onClick = { selectedTab = index; overlayScreen = null },
+                        icon = {
+                            Icon(
+                                if (selectedTab == index && overlayScreen == null) item.selectedIcon
+                                else item.icon,
+                                contentDescription = item.label
+                            )
+                        },
+                        label = { Text(item.label) }
+                    )
+                }
             }
         }
     ) { padding ->

@@ -43,18 +43,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.focustimer.app.PrefsManager
+import com.focustimer.app.ui.theme.ThemeState
 
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier, onLogout: () -> Unit = {}) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            "Настройки",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-        )
-
         TabRow(selectedTabIndex = selectedTab) {
             Tab(
                 selected = selectedTab == 0,
@@ -85,6 +80,7 @@ private fun GeneralSettingsTab(onLogout: () -> Unit) {
     var soundEnabled by remember { mutableStateOf(prefs.soundEnabled) }
     var vibrationEnabled by remember { mutableStateOf(prefs.vibrationEnabled) }
     var keepScreenOn by remember { mutableStateOf(prefs.keepScreenOn) }
+    var dynamicColor by remember { mutableStateOf(prefs.dynamicColorEnabled) }
 
     var telegramEnabled by remember { mutableStateOf(prefs.telegramEnabled) }
     var telegramToken by remember { mutableStateOf(prefs.telegramBotToken) }
@@ -151,6 +147,14 @@ private fun GeneralSettingsTab(onLogout: () -> Unit) {
         SettingRow("Не выключать экран во время таймера", keepScreenOn) {
             keepScreenOn = it
             prefs.keepScreenOn = it
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            SettingRow("Цвета из обоев системы", dynamicColor) {
+                dynamicColor = it
+                prefs.dynamicColorEnabled = it
+                // ThemeState is what the theme observes, so the repaint is immediate.
+                ThemeState.dynamicColor = it
+            }
         }
 
         Divider(modifier = Modifier.padding(vertical = 16.dp))

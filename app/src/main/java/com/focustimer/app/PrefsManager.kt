@@ -281,6 +281,11 @@ class PrefsManager(context: Context) {
         get() = prefs.getBoolean(KEY_KEEP_SCREEN_ON, true)
         set(value) = prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, value).apply()
 
+    /** Material You: recolour the app from the wallpaper on Android 12+. Off = brand palette. */
+    var dynamicColorEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
+        set(value) = prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, value).apply()
+
     var telegramEnabled: Boolean
         get() = prefs.getBoolean(KEY_TG_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_TG_ENABLED, value).apply()
@@ -776,6 +781,7 @@ class PrefsManager(context: Context) {
             put("soundEnabled", soundEnabled)
             put("vibrationEnabled", vibrationEnabled)
             put("keepScreenOn", keepScreenOn)
+            put("dynamicColorEnabled", dynamicColorEnabled)
             put("categories", JSONArray(categories))
         }
         root.put("settings", settings)
@@ -821,6 +827,7 @@ class PrefsManager(context: Context) {
                 soundEnabled = settingsObj.optBoolean("soundEnabled", soundEnabled)
                 vibrationEnabled = settingsObj.optBoolean("vibrationEnabled", vibrationEnabled)
                 keepScreenOn = settingsObj.optBoolean("keepScreenOn", keepScreenOn)
+                dynamicColorEnabled = settingsObj.optBoolean("dynamicColorEnabled", dynamicColorEnabled)
                 settingsObj.optJSONArray("categories")?.let { arr ->
                     categories = (0 until arr.length()).map { arr.getString(it) }
                 }
@@ -862,6 +869,7 @@ class PrefsManager(context: Context) {
         private const val KEY_SOUND = "sound_enabled"
         private const val KEY_VIBRATION = "vibration_enabled"
         private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color_enabled"
         private const val KEY_TG_ENABLED = "telegram_enabled"
         private const val KEY_TG_TOKEN = "telegram_bot_token"
         private const val KEY_TG_CHAT = "telegram_chat_id"

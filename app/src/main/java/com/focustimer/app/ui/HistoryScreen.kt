@@ -42,12 +42,6 @@ fun HistoryScreen(modifier: Modifier = Modifier) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            "Планы",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-        )
-
         TabRow(selectedTabIndex = selectedTab) {
             Tab(
                 selected = selectedTab == 0,

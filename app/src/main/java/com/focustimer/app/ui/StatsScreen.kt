@@ -99,8 +99,6 @@ fun StatsScreen(modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
-        Text("Статистика", style = MaterialTheme.typography.headlineMedium)
-
         StatRow("Сегодня", formatDuration(todaySeconds))
         StatRow("За неделю", formatDuration(weekSeconds))
         StatRow("За месяц", formatDuration(monthSeconds))
