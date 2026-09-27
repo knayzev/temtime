@@ -48,7 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
@@ -107,6 +109,8 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val prefs = remember { PrefsManager(context) }
     val todayKey = remember { dateKeyOf(Calendar.getInstance()) }
     val previousDates = remember { datesBefore(todayKey, 60) }
+
+    val haptics = LocalHapticFeedback.current
 
     var tasks by remember { mutableStateOf(prefs.routineTasks) }
     var selectedDate by remember { mutableStateOf(todayKey) }
@@ -313,6 +317,9 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             // leaving a countdown attached to something already done.
                             if (newDone && runningTaskId == task.id) stopChain()
                             if (pendingNextId == task.id) pendingNextId = null
+                            // Ticking something off is the reward on this screen, so it gets
+                            // a confirming tap back.
+                            if (newDone) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             prefs.setRoutineTaskDone(selectedDate, task.id, newDone)
                             completedIds = prefs.getCompletedRoutineIds(selectedDate)
                         },
