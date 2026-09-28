@@ -118,13 +118,16 @@ val DEFAULT_ROUTINE_TASKS = listOf(
 data class PlanTask(
     val id: String,
     val title: String,
-    val durationMinutes: Int
+    val durationMinutes: Int,
+    /** When the item is meant to happen, as "HH:MM". Blank means no time was set. */
+    val timeOfDay: String = ""
 )
 
 data class PlanTemplate(
     val id: String,
     val name: String,
-    val tasks: List<PlanTask>
+    val tasks: List<PlanTask>,
+    val comment: String = ""
 )
 
 data class PlanHistoryEntry(
@@ -136,20 +139,63 @@ data class PlanHistoryEntry(
     val note: String = ""
 )
 
+/** How many plans a user may keep at once. */
+const val MAX_PLAN_TEMPLATES = 10
+
+/**
+ * Suggested items for a day, ordered from waking up to going to bed. The times are defaults the
+ * user is expected to move; they exist so a freshly added item is never left without one.
+ */
 val PLAN_TASK_LIBRARY = listOf(
-    PlanTask("plantask_wake", "Проснуться", 1),
-    PlanTask("plantask_water", "Стакан воды", 1),
-    PlanTask("plantask_stretch", "Растяжка", 10),
-    PlanTask("plantask_exercise", "Зарядка", 15),
-    PlanTask("plantask_shower", "Душ", 10),
-    PlanTask("plantask_breakfast", "Завтрак", 20),
-    PlanTask("plantask_plan", "Планирование дня", 5),
-    PlanTask("plantask_meditate", "Медитация", 10),
-    PlanTask("plantask_walk", "Прогулка", 15),
-    PlanTask("plantask_read", "Чтение", 15),
-    PlanTask("plantask_teeth", "Почистить зубы", 3),
-    PlanTask("plantask_work", "Рабочий блок", 45)
+    PlanTask("plantask_wake", "Проснуться", 1, "06:30"),
+    PlanTask("plantask_water", "Стакан воды", 1, "06:35"),
+    PlanTask("plantask_exercise", "Зарядка", 15, "06:45"),
+    PlanTask("plantask_stretch", "Растяжка", 10, "07:00"),
+    PlanTask("plantask_shower", "Душ", 10, "07:15"),
+    PlanTask("plantask_teeth", "Почистить зубы", 3, "07:25"),
+    PlanTask("plantask_breakfast", "Завтрак", 25, "07:30"),
+    PlanTask("plantask_plan", "Планирование дня", 10, "08:00"),
+    PlanTask("plantask_meditate", "Медитация", 10, "08:10"),
+    PlanTask("plantask_commute_work", "Дорога на работу", 30, "08:20"),
+    PlanTask("plantask_deep_work", "Глубокая работа", 90, "09:00"),
+    PlanTask("plantask_mail", "Разбор почты", 20, "10:30"),
+    PlanTask("plantask_calls", "Созвоны", 45, "11:00"),
+    PlanTask("plantask_snack", "Перекус", 10, "11:45"),
+    PlanTask("plantask_work", "Рабочий блок", 60, "12:00"),
+    PlanTask("plantask_lunch", "Обед", 40, "13:00"),
+    PlanTask("plantask_walk_lunch", "Прогулка после обеда", 20, "13:40"),
+    PlanTask("plantask_work_second", "Рабочий блок, вторая половина", 90, "14:00"),
+    PlanTask("plantask_break", "Перерыв", 15, "15:30"),
+    PlanTask("plantask_study", "Учёба и развитие", 45, "16:00"),
+    PlanTask("plantask_tomorrow", "Разбор задач на завтра", 15, "17:30"),
+    PlanTask("plantask_commute_home", "Дорога домой", 30, "18:00"),
+    PlanTask("plantask_gym", "Тренажёрный зал", 75, "18:30"),
+    PlanTask("plantask_shower_gym", "Душ после зала", 15, "20:00"),
+    PlanTask("plantask_dinner", "Ужин", 30, "20:20"),
+    PlanTask("plantask_family", "Время с близкими", 45, "21:00"),
+    PlanTask("plantask_read", "Чтение", 30, "21:45"),
+    PlanTask("plantask_walk_evening", "Прогулка перед сном", 20, "22:15"),
+    PlanTask("plantask_no_screens", "Без экранов", 30, "22:35"),
+    PlanTask("plantask_bed_prep", "Подготовка ко сну", 15, "23:00"),
+    PlanTask("plantask_sleep", "Отбой", 1, "23:15")
 )
+
+/** The handful offered as chips, so the quick picks do not become another long list. */
+val PLAN_QUICK_PICK_IDS = listOf(
+    "plantask_breakfast",
+    "plantask_exercise",
+    "plantask_plan",
+    "plantask_deep_work",
+    "plantask_lunch",
+    "plantask_walk_lunch",
+    "plantask_work_second",
+    "plantask_study",
+    "plantask_gym",
+    "plantask_dinner",
+    "plantask_read",
+    "plantask_bed_prep"
+)
+
 
 val DEFAULT_CATEGORIES = listOf("Работа", "Учёба", "Соцсети", "Прокрастинация", "Другое")
 
@@ -537,10 +583,21 @@ class PrefsManager(context: Context) {
                         PlanTask(
                             id = t.getString("id"),
                             title = t.getString("title"),
-                            durationMinutes = t.getInt("durationMinutes")
+                            durationMinutes = t.getInt("durationMinutes"),
+                            // Plans saved before items carried a time fall back to the
+                            // library default, then to blank.
+                            timeOfDay = t.optString(
+                                "timeOfDay",
+                                PLAN_TASK_LIBRARY.firstOrNull { it.id == t.getString("id") }?.timeOfDay ?: ""
+                            )
                         )
                     }
-                    PlanTemplate(id = obj.getString("id"), name = obj.getString("name"), tasks = tasks)
+                    PlanTemplate(
+                        id = obj.getString("id"),
+                        name = obj.getString("name"),
+                        tasks = tasks,
+                        comment = obj.optString("comment", "")
+                    )
                 }
             } catch (_: Exception) {
                 emptyList()
@@ -556,6 +613,7 @@ class PrefsManager(context: Context) {
                             put("id", task.id)
                             put("title", task.title)
                             put("durationMinutes", task.durationMinutes)
+                            put("timeOfDay", task.timeOfDay)
                         }
                     )
                 }
@@ -563,6 +621,7 @@ class PrefsManager(context: Context) {
                     JSONObject().apply {
                         put("id", template.id)
                         put("name", template.name)
+                        put("comment", template.comment)
                         put("tasks", tasksArr)
                     }
                 )

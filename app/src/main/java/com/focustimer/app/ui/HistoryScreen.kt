@@ -38,7 +38,12 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun HistoryScreen(modifier: Modifier = Modifier) {
+fun HistoryScreen(
+    onCreatePlan: () -> Unit,
+    onEditPlan: (String) -> Unit,
+    expandedPlanId: String? = null,
+    modifier: Modifier = Modifier
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -46,19 +51,23 @@ fun HistoryScreen(modifier: Modifier = Modifier) {
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text("История") }
+                text = { Text("Мои планы") }
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text("План на день") }
+                text = { Text("История") }
             )
         }
 
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
-                0 -> HistoryTab()
-                1 -> DayPlanScreen(onBack = {}, embedded = true)
+                0 -> PlansListScreen(
+                    onCreatePlan = onCreatePlan,
+                    onEditPlan = onEditPlan,
+                    expandedPlanId = expandedPlanId
+                )
+                1 -> HistoryTab()
             }
         }
     }

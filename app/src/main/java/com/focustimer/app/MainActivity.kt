@@ -64,12 +64,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.focustimer.app.ui.AuthScreen
-import com.focustimer.app.ui.DayPlanScreen
 import com.focustimer.app.ui.HistoryScreen
-import com.focustimer.app.ui.IntroScreen
 import com.focustimer.app.ui.LifestyleQuestionsScreen
 import com.focustimer.app.ui.OnboardingScreen
+import com.focustimer.app.ui.PlanEditorScreen
 import com.focustimer.app.ui.ProfileScreen
+import com.focustimer.app.ui.ProfileSetupScreen
 import com.focustimer.app.ui.RoutineScreen
 import com.focustimer.app.ui.SettingsScreen
 import com.focustimer.app.ui.StatsScreen
@@ -94,9 +94,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class RootScreen { AUTH, INTRO, ONBOARDING, LIFESTYLE, PLAN_SETUP, MAIN }
+private enum class RootScreen { AUTH, PROFILE_SETUP, PLAN_SETUP, MAIN }
 
-private enum class OverlayScreen { ROUTINE }
+private enum class OverlayScreen { ROUTINE, PLAN_EDITOR, LIFESTYLE, DETAILS }
 
 /** One bottom-bar destination. The filled icon marks the active tab, the outlined one the rest. */
 private data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
@@ -109,6 +109,8 @@ private val NAV_ITEMS = listOf(
     NavItem("Профиль", Icons.Outlined.Person, Icons.Filled.Person)
 )
 
+private const val TAB_PLANS = 1
+
 @Composable
 fun RootNavigator(timerViewModel: TimerViewModel) {
     val context = LocalContext.current
@@ -118,11 +120,13 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
         mutableStateOf(
             when {
                 !prefs.isRegistered || !prefs.isLoggedIn -> RootScreen.AUTH
-                !prefs.isOnboarded -> RootScreen.INTRO
+                !prefs.isOnboarded -> RootScreen.PROFILE_SETUP
                 else -> RootScreen.MAIN
             }
         )
     }
+    // Set when setup ends, so the plan that was just built is the one already open on arrival.
+    var freshPlanId by remember { mutableStateOf<String?>(null) }
 
     when (screen) {
         RootScreen.MAIN -> AppRoot(
@@ -130,7 +134,9 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
             onLogout = {
                 prefs.isLoggedIn = false
                 screen = RootScreen.AUTH
-            }
+            },
+            initialTab = if (freshPlanId != null) TAB_PLANS else 0,
+            initialExpandedPlanId = freshPlanId
         )
         // The pre-MAIN flow has no Scaffold of its own, so it keeps clear of the system bars
         // itself now that the activity draws edge to edge.
@@ -139,16 +145,20 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
                 RootScreen.AUTH -> AuthScreen(
                     startInLoginMode = prefs.isRegistered,
                     onAuthenticated = {
-                        screen = if (prefs.isOnboarded) RootScreen.MAIN else RootScreen.INTRO
+                        screen = if (prefs.isOnboarded) RootScreen.MAIN else RootScreen.PROFILE_SETUP
                     }
                 )
-                RootScreen.INTRO -> IntroScreen(onContinue = { screen = RootScreen.ONBOARDING })
-                RootScreen.ONBOARDING -> OnboardingScreen(onComplete = { screen = RootScreen.LIFESTYLE })
-                RootScreen.LIFESTYLE -> LifestyleQuestionsScreen(onComplete = { screen = RootScreen.PLAN_SETUP })
-                RootScreen.PLAN_SETUP -> DayPlanScreen(
-                    onBack = {},
+                RootScreen.PROFILE_SETUP -> ProfileSetupScreen(
+                    onCreatePlan = { screen = RootScreen.PLAN_SETUP }
+                )
+                RootScreen.PLAN_SETUP -> PlanEditorScreen(
                     isSetupFlow = true,
-                    onSetupComplete = { screen = RootScreen.MAIN }
+                    onDone = { planId ->
+                        // Finishing the first plan is what completes setup.
+                        prefs.isOnboarded = true
+                        freshPlanId = planId
+                        screen = RootScreen.MAIN
+                    }
                 )
                 RootScreen.MAIN -> Unit
             }
@@ -158,11 +168,19 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+fun AppRoot(
+    timerViewModel: TimerViewModel,
+    onLogout: () -> Unit,
+    initialTab: Int = 0,
+    initialExpandedPlanId: String? = null
+) {
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
     val tabs = NAV_ITEMS.map { it.label }
 
     var overlayScreen by remember { mutableStateOf<OverlayScreen?>(null) }
+    // The plan the editor is opened on; null means the editor builds a new one.
+    var editorPlanId by remember { mutableStateOf<String?>(null) }
+    var expandedPlanId by remember { mutableStateOf(initialExpandedPlanId) }
 
     val context = LocalContext.current
     val view = LocalView.current
@@ -206,7 +224,17 @@ fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
             TopAppBar(
                 // Naming the current section here lets each screen drop its own duplicate
                 // headline, which buys back a chunk of vertical space on a phone.
-                title = { Text(if (overlayScreen == OverlayScreen.ROUTINE) "Ритуалы" else tabs[selectedTab]) },
+                title = {
+                    Text(
+                        when (overlayScreen) {
+                            OverlayScreen.ROUTINE -> "Ритуалы"
+                            OverlayScreen.PLAN_EDITOR -> "План"
+                            OverlayScreen.LIFESTYLE -> "Образ жизни"
+                            OverlayScreen.DETAILS -> "Подробная анкета"
+                            null -> tabs[selectedTab]
+                        }
+                    )
+                },
                 actions = {
                     // One destination, so it opens directly instead of through a one-item menu.
                     IconButton(onClick = { overlayScreen = OverlayScreen.ROUTINE }) {
@@ -245,12 +273,41 @@ fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
             }
             when (overlayScreen) {
                 OverlayScreen.ROUTINE -> RoutineScreen(onBack = { overlayScreen = null })
+                OverlayScreen.PLAN_EDITOR -> PlanEditorScreen(
+                    editingPlanId = editorPlanId,
+                    onBack = { overlayScreen = null },
+                    onDone = { planId ->
+                        expandedPlanId = planId
+                        overlayScreen = null
+                    }
+                )
+                OverlayScreen.LIFESTYLE -> LifestyleQuestionsScreen(
+                    onComplete = { overlayScreen = null }
+                )
+                // The long questionnaire is no longer part of setup, but it is the only place
+                // some schedule inputs are collected, so it stays reachable from the profile.
+                OverlayScreen.DETAILS -> OnboardingScreen(
+                    onComplete = { overlayScreen = null }
+                )
                 null -> when (selectedTab) {
                     0 -> TimerScreen(timerViewModel)
-                    1 -> HistoryScreen()
+                    1 -> HistoryScreen(
+                        onCreatePlan = {
+                            editorPlanId = null
+                            overlayScreen = OverlayScreen.PLAN_EDITOR
+                        },
+                        onEditPlan = { id ->
+                            editorPlanId = id
+                            overlayScreen = OverlayScreen.PLAN_EDITOR
+                        },
+                        expandedPlanId = expandedPlanId
+                    )
                     2 -> StatsScreen()
                     3 -> SettingsScreen(onLogout = onLogout)
-                    4 -> ProfileScreen()
+                    4 -> ProfileScreen(
+                        onOpenLifestyle = { overlayScreen = OverlayScreen.LIFESTYLE },
+                        onOpenDetails = { overlayScreen = OverlayScreen.DETAILS }
+                    )
                 }
             }
         }

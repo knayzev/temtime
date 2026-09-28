@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -31,6 +32,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -70,7 +72,11 @@ private val GENDER_OPTIONS = listOf(
 )
 
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier) {
+fun ProfileScreen(
+    onOpenLifestyle: () -> Unit = {},
+    onOpenDetails: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -95,7 +101,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> ProfileFormTab()
-                1 -> ScheduleTab()
+                1 -> ScheduleTab(onOpenLifestyle = onOpenLifestyle, onOpenDetails = onOpenDetails)
                 2 -> RecommendationsTab()
             }
         }
@@ -329,7 +335,7 @@ private fun ProfileFormTab() {
 }
 
 @Composable
-private fun ScheduleTab() {
+private fun ScheduleTab(onOpenLifestyle: () -> Unit, onOpenDetails: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 
@@ -342,7 +348,7 @@ private fun ScheduleTab() {
         Text("Ваш график дня", style = MaterialTheme.typography.headlineMedium)
         if (prefs.daySchedule.isBlank()) {
             Text(
-                "График ещё не сгенерирован — пройдите анкету образа жизни при регистрации, чтобы получить его",
+                "График ещё не сгенерирован. Пройдите анкету образа жизни — она подберёт график под ваш сон, приёмы пищи и работу.",
                 modifier = Modifier.padding(top = 12.dp)
             )
         } else {
@@ -352,6 +358,24 @@ private fun ScheduleTab() {
                     .fillMaxWidth()
                     .padding(top = 12.dp)
             )
+        }
+
+        // Setup no longer walks through these, so this is where they are reached from.
+        Button(
+            onClick = onOpenLifestyle,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp)
+        ) {
+            Text(if (prefs.daySchedule.isBlank()) "Пройти анкету образа жизни" else "Пересобрать график")
+        }
+        OutlinedButton(
+            onClick = onOpenDetails,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+        ) {
+            Text("Подробная анкета о себе")
         }
     }
 }
