@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -106,6 +108,34 @@ fun PlanEditorScreen(
 
     fun replaceItem(updated: PlanTask) {
         items = sorted(items.map { if (it.id == updated.id) updated else it })
+    }
+
+    /**
+     * Order comes from the time of day, so moving a card means the two neighbours trade times —
+     * that keeps the plan chronological instead of fighting the sort. Items sharing a time (or
+     * without one) have nothing to trade, so they swap positions instead.
+     */
+    fun moveItem(index: Int, delta: Int) {
+        val target = index + delta
+        if (target < 0 || target > items.lastIndex) return
+        val a = items[index]
+        val b = items[target]
+        items = if (a.timeOfDay.isNotBlank() && b.timeOfDay.isNotBlank() && a.timeOfDay != b.timeOfDay) {
+            sorted(
+                items.map {
+                    when (it.id) {
+                        a.id -> it.copy(timeOfDay = b.timeOfDay)
+                        b.id -> it.copy(timeOfDay = a.timeOfDay)
+                        else -> it
+                    }
+                }
+            )
+        } else {
+            items.toMutableList().also {
+                it[index] = b
+                it[target] = a
+            }
+        }
     }
 
     fun generateFromProfession() {
@@ -319,12 +349,14 @@ fun PlanEditorScreen(
             modifier = Modifier.padding(top = 24.dp, bottom = 4.dp)
         )
 
-        items.forEach { item ->
+        items.forEachIndexed { index, item ->
             PlanItemRow(
                 item = item,
                 onTimeClick = { timePickerFor = item },
                 onEditClick = { editingItem = item },
-                onRemove = { removeItem(item.id) }
+                onRemove = { removeItem(item.id) },
+                onMoveUp = if (index > 0) ({ moveItem(index, -1) }) else null,
+                onMoveDown = if (index < items.lastIndex) ({ moveItem(index, 1) }) else null
             )
         }
 
@@ -425,7 +457,9 @@ private fun PlanItemRow(
     item: PlanTask,
     onTimeClick: () -> Unit,
     onEditClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -474,6 +508,23 @@ private fun PlanItemRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            // Disabled rather than hidden at the ends of the list, so the row never reflows.
+            Column {
+                IconButton(
+                    onClick = { onMoveUp?.invoke() },
+                    enabled = onMoveUp != null,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Выше")
+                }
+                IconButton(
+                    onClick = { onMoveDown?.invoke() },
+                    enabled = onMoveDown != null,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Ниже")
+                }
             }
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.Close, contentDescription = "Убрать из плана")

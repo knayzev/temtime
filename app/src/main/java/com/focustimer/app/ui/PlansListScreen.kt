@@ -1,5 +1,6 @@
 package com.focustimer.app.ui
 
+import android.speech.tts.TextToSpeech
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +52,7 @@ import com.focustimer.app.PlanTask
 import com.focustimer.app.PlanTemplate
 import com.focustimer.app.PrefsManager
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 /**
  * Step three: every saved plan, each collapsible down to its items. Creating another one is the
@@ -331,6 +334,9 @@ private fun PlanRunner(
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val prefs = remember { PrefsManager(context) }
+
     var index by remember(plan.id) { mutableStateOf(0) }
     var secondsLeft by remember(plan.id) { mutableStateOf(plan.tasks.firstOrNull()?.durationMinutes?.times(60) ?: 0) }
     var paused by remember(plan.id) { mutableStateOf(false) }
@@ -352,11 +358,21 @@ private fun PlanRunner(
         }
     }
 
+    // A heads-up while the current item is still running beats one that arrives with it.
+    val speak = rememberPlanSpeaker(
+        if (prefs.voiceLanguage == "English") Locale.US else Locale("ru")
+    )
+
     LaunchedEffect(index, paused, plan.id) {
         if (paused) return@LaunchedEffect
         while (secondsLeft > 0) {
             delay(1000)
             secondsLeft -= 1
+            if (secondsLeft == ANNOUNCE_LEAD_SECONDS) {
+                plan.tasks.getOrNull(index + 1)?.let { next ->
+                    speak("Через 15 секунд: " + next.title)
+                }
+            }
         }
         advance()
     }
@@ -462,4 +478,42 @@ private fun formatTotalList(totalMinutes: Int): String {
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
     return if (hours > 0) "$hours ч $minutes мин" else "$minutes мин"
+}
+
+/** How long before an item starts its name is announced. */
+private const val ANNOUNCE_LEAD_SECONDS = 15
+
+/**
+ * A speech engine tied to the composable's lifetime. Returns a function that says one line, or
+ * does nothing when the device has no usable engine — the countdown must not depend on speech.
+ */
+@Composable
+private fun rememberPlanSpeaker(locale: Locale): (String) -> Unit {
+    val context = LocalContext.current
+    val ready = remember { mutableStateOf(false) }
+    val engine = remember {
+        var created: TextToSpeech? = null
+        created = TextToSpeech(context.applicationContext) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                created?.setLanguage(locale)
+                ready.value = true
+            }
+        }
+        created
+    }
+
+    DisposableEffect(engine) {
+        onDispose {
+            engine?.stop()
+            engine?.shutdown()
+        }
+    }
+
+    return remember(engine) {
+        { text: String ->
+            if (ready.value) {
+                engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "plan_runner_announce")
+            }
+        }
+    }
 }
