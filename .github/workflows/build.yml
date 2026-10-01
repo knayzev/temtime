@@ -55,3 +55,5 @@ jobs:
             --title "Latest build" \
             --notes "Automatically built from the latest commit on main." \
             --latest
+          # A green build clears the errors left by the last red one.
+          gh release delete ci-errors --yes --cleanup-tag || true

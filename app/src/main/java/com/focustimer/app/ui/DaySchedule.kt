@@ -421,7 +421,7 @@ fun parseMinutes(text: String): Int {
     return hour * 60 + minute
 }
 
-fun minutesToTime(total: Int): String {
+fun minutesToClock(total: Int): String {
     val clamped = total.coerceIn(0, 23 * 60 + 59)
     return "%02d:%02d".format(clamped / 60, clamped % 60)
 }

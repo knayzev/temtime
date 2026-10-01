@@ -412,7 +412,7 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
     if (addingItem) {
         PlanItemDialog(
             existing = null,
-            defaultTime = minutesToTime(
+            defaultTime = minutesToClock(
                 planItems.maxOfOrNull { parseMinutes(it.time) + it.minutes } ?: nowMinutesOfDay()
             ),
             onDismiss = { addingItem = false },

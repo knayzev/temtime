@@ -51,7 +51,7 @@ fun ScheduleSetupScreen(onDone: () -> Unit, modifier: Modifier = Modifier) {
             PlanItem(
                 id = "planitem_${stamp}_$index",
                 title = item.title,
-                time = minutesToTime(at),
+                time = minutesToClock(at),
                 minutes = item.durationMinutes,
                 comment = ""
             )
@@ -169,7 +169,7 @@ fun ScheduleSetupScreen(onDone: () -> Unit, modifier: Modifier = Modifier) {
     if (adding) {
         PlanItemDialog(
             existing = null,
-            defaultTime = minutesToTime(
+            defaultTime = minutesToClock(
                 (items.maxOfOrNull { parseMinutes(it.time) + it.minutes } ?: (12 * 60))
             ),
             onDismiss = { adding = false },
