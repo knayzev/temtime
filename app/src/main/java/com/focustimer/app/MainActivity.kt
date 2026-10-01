@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.EventNote
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
@@ -67,7 +67,7 @@ import com.focustimer.app.ui.AuthScreen
 import com.focustimer.app.ui.HistoryScreen
 import com.focustimer.app.ui.LifestyleQuestionsScreen
 import com.focustimer.app.ui.OnboardingScreen
-import com.focustimer.app.ui.PlanEditorScreen
+import com.focustimer.app.ui.ScheduleSetupScreen
 import com.focustimer.app.ui.ProfileScreen
 import com.focustimer.app.ui.ProfileSetupScreen
 import com.focustimer.app.ui.RoutineScreen
@@ -85,6 +85,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Lifts the old plan containers into the flat schedule; a no-op after the first run.
+        PrefsManager(this).migratePlansIfNeeded()
         ThemeState.dynamicColor = PrefsManager(this).dynamicColorEnabled
         setContent {
             FocusTimerTheme(dynamicColor = ThemeState.dynamicColor) {
@@ -94,22 +96,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class RootScreen { AUTH, PROFILE_SETUP, PLAN_SETUP, MAIN }
+private enum class RootScreen { AUTH, PROFILE_SETUP, SCHEDULE_SETUP, MAIN }
 
-private enum class OverlayScreen { ROUTINE, PLAN_EDITOR, LIFESTYLE, DETAILS }
+private enum class OverlayScreen { ROUTINE, LIFESTYLE, DETAILS }
 
 /** One bottom-bar destination. The filled icon marks the active tab, the outlined one the rest. */
 private data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
 
 private val NAV_ITEMS = listOf(
-    NavItem("Таймер", Icons.Outlined.Timer, Icons.Filled.Timer),
-    NavItem("Планы", Icons.Outlined.EventNote, Icons.Filled.EventNote),
+    NavItem("Сегодня", Icons.Outlined.Timer, Icons.Filled.Timer),
+    NavItem("История", Icons.Outlined.History, Icons.Filled.History),
     NavItem("Статистика", Icons.Outlined.BarChart, Icons.Filled.BarChart),
     NavItem("Настройки", Icons.Outlined.Settings, Icons.Filled.Settings),
     NavItem("Профиль", Icons.Outlined.Person, Icons.Filled.Person)
 )
-
-private const val TAB_PLANS = 1
 
 @Composable
 fun RootNavigator(timerViewModel: TimerViewModel) {
@@ -125,8 +125,6 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
             }
         )
     }
-    // Set when setup ends, so the plan that was just built is the one already open on arrival.
-    var freshPlanId by remember { mutableStateOf<String?>(null) }
 
     when (screen) {
         RootScreen.MAIN -> AppRoot(
@@ -134,9 +132,7 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
             onLogout = {
                 prefs.isLoggedIn = false
                 screen = RootScreen.AUTH
-            },
-            initialTab = if (freshPlanId != null) TAB_PLANS else 0,
-            initialExpandedPlanId = freshPlanId
+            }
         )
         // The pre-MAIN flow has no Scaffold of its own, so it keeps clear of the system bars
         // itself now that the activity draws edge to edge.
@@ -149,16 +145,10 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
                     }
                 )
                 RootScreen.PROFILE_SETUP -> ProfileSetupScreen(
-                    onCreatePlan = { screen = RootScreen.PLAN_SETUP }
+                    onNext = { screen = RootScreen.SCHEDULE_SETUP }
                 )
-                RootScreen.PLAN_SETUP -> PlanEditorScreen(
-                    isSetupFlow = true,
-                    onDone = { planId ->
-                        // Finishing the first plan is what completes setup.
-                        prefs.isOnboarded = true
-                        freshPlanId = planId
-                        screen = RootScreen.MAIN
-                    }
+                RootScreen.SCHEDULE_SETUP -> ScheduleSetupScreen(
+                    onDone = { screen = RootScreen.MAIN }
                 )
                 RootScreen.MAIN -> Unit
             }
@@ -168,19 +158,11 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppRoot(
-    timerViewModel: TimerViewModel,
-    onLogout: () -> Unit,
-    initialTab: Int = 0,
-    initialExpandedPlanId: String? = null
-) {
-    var selectedTab by remember { mutableIntStateOf(initialTab) }
+fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
+    var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = NAV_ITEMS.map { it.label }
 
     var overlayScreen by remember { mutableStateOf<OverlayScreen?>(null) }
-    // The plan the editor is opened on; null means the editor builds a new one.
-    var editorPlanId by remember { mutableStateOf<String?>(null) }
-    var expandedPlanId by remember { mutableStateOf(initialExpandedPlanId) }
 
     val context = LocalContext.current
     val view = LocalView.current
@@ -228,7 +210,6 @@ fun AppRoot(
                     Text(
                         when (overlayScreen) {
                             OverlayScreen.ROUTINE -> "Ритуалы"
-                            OverlayScreen.PLAN_EDITOR -> "План"
                             OverlayScreen.LIFESTYLE -> "Образ жизни"
                             OverlayScreen.DETAILS -> "Подробная анкета"
                             null -> tabs[selectedTab]
@@ -273,14 +254,6 @@ fun AppRoot(
             }
             when (overlayScreen) {
                 OverlayScreen.ROUTINE -> RoutineScreen(onBack = { overlayScreen = null })
-                OverlayScreen.PLAN_EDITOR -> PlanEditorScreen(
-                    editingPlanId = editorPlanId,
-                    onBack = { overlayScreen = null },
-                    onDone = { planId ->
-                        expandedPlanId = planId
-                        overlayScreen = null
-                    }
-                )
                 OverlayScreen.LIFESTYLE -> LifestyleQuestionsScreen(
                     onComplete = { overlayScreen = null }
                 )
@@ -291,17 +264,7 @@ fun AppRoot(
                 )
                 null -> when (selectedTab) {
                     0 -> TimerScreen(timerViewModel)
-                    1 -> HistoryScreen(
-                        onCreatePlan = {
-                            editorPlanId = null
-                            overlayScreen = OverlayScreen.PLAN_EDITOR
-                        },
-                        onEditPlan = { id ->
-                            editorPlanId = id
-                            overlayScreen = OverlayScreen.PLAN_EDITOR
-                        },
-                        expandedPlanId = expandedPlanId
-                    )
+                    1 -> HistoryScreen()
                     2 -> StatsScreen()
                     3 -> SettingsScreen(onLogout = onLogout)
                     4 -> ProfileScreen(

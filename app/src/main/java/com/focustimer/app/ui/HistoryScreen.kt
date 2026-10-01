@@ -1,7 +1,6 @@
 package com.focustimer.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,12 +15,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,40 +33,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Past sessions and finished plan runs. The day's schedule itself lives on the timer screen. */
 @Composable
-fun HistoryScreen(
-    onCreatePlan: () -> Unit,
-    onEditPlan: (String) -> Unit,
-    expandedPlanId: String? = null,
-    modifier: Modifier = Modifier
-) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    Column(modifier = modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("Мои планы") }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("История") }
-            )
-        }
-
-        Box(modifier = Modifier.weight(1f)) {
-            when (selectedTab) {
-                0 -> PlansListScreen(
-                    onCreatePlan = onCreatePlan,
-                    onEditPlan = onEditPlan,
-                    expandedPlanId = expandedPlanId
-                )
-                1 -> HistoryTab()
-            }
-        }
-    }
+fun HistoryScreen(modifier: Modifier = Modifier) {
+    HistoryTab(modifier = modifier)
 }
 
 @Composable

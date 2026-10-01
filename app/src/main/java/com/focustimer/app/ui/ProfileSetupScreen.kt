@@ -43,7 +43,7 @@ private const val GENDER_FEMALE = "Женский"
  * only what the plan and the advice engine need.
  */
 @Composable
-fun ProfileSetupScreen(onCreatePlan: () -> Unit, modifier: Modifier = Modifier) {
+fun ProfileSetupScreen(onNext: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 
@@ -55,6 +55,7 @@ fun ProfileSetupScreen(onCreatePlan: () -> Unit, modifier: Modifier = Modifier) 
         mutableStateOf(prefs.profession.ifBlank { presetForProfession("").name })
     }
     var professionDetails by remember { mutableStateOf(prefs.professionDetails) }
+    var wakeTime by remember { mutableStateOf(prefs.wakeTime) }
 
     val preset = remember(profession) { presetForProfession(profession) }
     val canContinue = gender.isNotBlank() && age.isNotBlank()
@@ -67,7 +68,7 @@ fun ProfileSetupScreen(onCreatePlan: () -> Unit, modifier: Modifier = Modifier) 
     ) {
         StepperHeader(
             currentStep = 1,
-            labels = listOf("О себе", "План на день", "Готово"),
+            labels = listOf("О себе", "Расписание", "Готово"),
             modifier = Modifier.padding(bottom = 20.dp)
         )
         HeroGlyph(emoji = "👤", size = 72.dp)
@@ -177,14 +178,21 @@ fun ProfileSetupScreen(onCreatePlan: () -> Unit, modifier: Modifier = Modifier) 
                 .padding(top = 12.dp)
         )
 
+        // The wake time anchors the generated schedule, so it is asked for here rather than later.
+        TimePickerRow(
+            label = "Во сколько встаёте",
+            timeText = wakeTime,
+            onTimeChange = { wakeTime = it; prefs.wakeTime = it }
+        )
+
         Button(
-            onClick = onCreatePlan,
+            onClick = onNext,
             enabled = canContinue,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 24.dp)
         ) {
-            Text("Создать план")
+            Text("Собрать расписание")
         }
         if (!canContinue) {
             Text(

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +63,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.focustimer.app.MAX_PLAN_ITEMS
+import com.focustimer.app.PlanItem
 import com.focustimer.app.PrefsManager
 import com.focustimer.app.TimerPhase
 import com.focustimer.app.TimerPreset
@@ -79,6 +82,43 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
     val categories = remember { prefs.categories }
     val liveSteps = rememberLiveStepCount(prefs.stepsEnabled)
 
+    val todayKey = remember { dayStamp() }
+    var planItems by remember { mutableStateOf(prefs.planItems) }
+    var doneIds by remember { mutableStateOf(prefs.completedPlanIds(todayKey)) }
+    var selectedPlanId by remember { mutableStateOf<String?>(null) }
+    var editingItem by remember { mutableStateOf<PlanItem?>(null) }
+    var addingItem by remember { mutableStateOf(false) }
+    var wordHidden by remember { mutableStateOf(prefs.wordSeenDate == todayKey) }
+    val term = remember { wordOfTheDay() }
+
+    val selectedPlan = planItems.firstOrNull { it.id == selectedPlanId }
+
+    /** Loads an entry into the timer without starting it: the user decides when to begin. */
+    fun selectPlan(item: PlanItem) {
+        selectedPlanId = item.id
+        viewModel.setWorkMinutes(item.minutes)
+        viewModel.setCategory(item.title)
+    }
+
+    // The service flips WORK to REST on its own when the work phase runs out. That transition is
+    // what "the entry is finished" means here, so it ticks the entry and queues the next one.
+    var lastPhase by remember { mutableStateOf(state.phase) }
+    LaunchedEffect(state.phase) {
+        if (lastPhase == TimerPhase.WORK && state.phase == TimerPhase.REST) {
+            selectedPlanId?.let { finishedId ->
+                prefs.setPlanItemDone(todayKey, finishedId, true)
+                doneIds = prefs.completedPlanIds(todayKey)
+                val next = planItems.firstOrNull { !doneIds.contains(it.id) }
+                selectedPlanId = next?.id
+                if (next != null) {
+                    viewModel.setWorkMinutes(next.minutes)
+                    viewModel.setCategory(next.title)
+                }
+            }
+        }
+        lastPhase = state.phase
+    }
+
     // Being on this screen counts as noticing the current phase.
     LaunchedEffect(Unit) {
         viewModel.acknowledge()
@@ -94,6 +134,51 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        if (!wordHidden) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Слово дня",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            term.word,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            term.meaning,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                    IconButton(onClick = {
+                        prefs.wordSeenDate = todayKey
+                        wordHidden = true
+                    }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Скрыть до завтра",
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+        }
+
         if (state.escalationActive) {
             Row(
                 modifier = Modifier
@@ -176,7 +261,12 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
         TimerDial(
             // Fraction of the phase still to go, so the ring empties as the time runs out.
             fraction = if (phaseSeconds > 0) state.secondsLeft.toFloat() / phaseSeconds else 0f,
-            phaseLabel = if (state.phase == TimerPhase.WORK) "Работа" else "Отдых",
+            // With an entry loaded the ring says what it is, not just that work is happening.
+            phaseLabel = when {
+                state.phase == TimerPhase.REST -> "Отдых"
+                selectedPlan != null -> selectedPlan.title
+                else -> "Работа"
+            },
             timeText = "%02d:%02d".format(minutes, seconds),
             phaseColor = if (state.phase == TimerPhase.WORK) WorkColor else RestColor,
             modifier = Modifier.padding(vertical = 20.dp)
@@ -290,6 +380,71 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
                 )
             }
         }
+
+        Divider(modifier = Modifier.padding(top = 28.dp, bottom = 18.dp))
+
+        DaySchedule(
+            items = planItems,
+            doneIds = doneIds,
+            runningId = if (state.phase == TimerPhase.WORK) selectedPlanId else null,
+            nowMinutes = nowMinutesOfDay(),
+            onSelect = { selectPlan(it) },
+            onToggleDone = { item ->
+                val nowDone = !doneIds.contains(item.id)
+                prefs.setPlanItemDone(todayKey, item.id, nowDone)
+                doneIds = prefs.completedPlanIds(todayKey)
+                // A ticked entry should not stay loaded in the timer as if it were still ahead.
+                if (nowDone && selectedPlanId == item.id) selectedPlanId = null
+            },
+            onEdit = { editingItem = it },
+            onAdd = { addingItem = true }
+        )
+        if (planItems.size >= MAX_PLAN_ITEMS) {
+            Text(
+                "Достигнут предел — $MAX_PLAN_ITEMS пунктов на день",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+
+    if (addingItem) {
+        PlanItemDialog(
+            existing = null,
+            defaultTime = minutesToTime(
+                planItems.maxOfOrNull { parseMinutes(it.time) + it.minutes } ?: nowMinutesOfDay()
+            ),
+            onDismiss = { addingItem = false },
+            onConfirm = { item ->
+                if (planItems.size < MAX_PLAN_ITEMS) {
+                    prefs.planItems = planItems + item
+                    planItems = prefs.planItems
+                }
+                addingItem = false
+            }
+        )
+    }
+
+    editingItem?.let { item ->
+        PlanItemDialog(
+            existing = item,
+            defaultTime = item.time,
+            onDismiss = { editingItem = null },
+            onConfirm = { updated ->
+                prefs.planItems = planItems.map { if (it.id == updated.id) updated else it }
+                planItems = prefs.planItems
+                // Picking up a new length only makes sense while that entry is not mid-run.
+                if (selectedPlanId == updated.id && !state.isRunning) selectPlan(updated)
+                editingItem = null
+            },
+            onDelete = {
+                prefs.planItems = planItems.filterNot { it.id == item.id }
+                planItems = prefs.planItems
+                if (selectedPlanId == item.id) selectedPlanId = null
+                editingItem = null
+            }
+        )
     }
 }
 

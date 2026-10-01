@@ -115,6 +115,22 @@ val DEFAULT_ROUTINE_TASKS = listOf(
     "routine_noscreen", "routine_air", "routine_bed"
 ).mapNotNull { id -> ROUTINE_TASK_LIBRARY.firstOrNull { it.id == id } }
 
+/**
+ * One entry in the day's schedule: a single activity with its own clock time and length. This
+ * replaced the earlier "plan holds a list of tasks" shape — a plan is now the activity itself.
+ */
+data class PlanItem(
+    val id: String,
+    val title: String,
+    /** When it happens, as "HH:MM". */
+    val time: String,
+    val minutes: Int,
+    val comment: String = ""
+)
+
+/** How many entries one day may hold. */
+const val MAX_PLAN_ITEMS = 20
+
 data class PlanTask(
     val id: String,
     val title: String,
@@ -570,6 +586,93 @@ class PrefsManager(context: Context) {
         daySummaries = updated
     }
 
+    var planItems: List<PlanItem>
+        get() {
+            val raw = prefs.getString(KEY_PLAN_ITEMS, null) ?: return emptyList()
+            return try {
+                val array = JSONArray(raw)
+                (0 until array.length()).map { i ->
+                    val o = array.getJSONObject(i)
+                    PlanItem(
+                        id = o.getString("id"),
+                        title = o.getString("title"),
+                        time = o.optString("time", "09:00"),
+                        minutes = o.optInt("minutes", 30),
+                        comment = o.optString("comment", "")
+                    )
+                }.sortedBy { it.time }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        set(value) {
+            val array = JSONArray()
+            value.sortedBy { it.time }.forEach { item ->
+                array.put(
+                    JSONObject().apply {
+                        put("id", item.id)
+                        put("title", item.title)
+                        put("time", item.time)
+                        put("minutes", item.minutes)
+                        put("comment", item.comment)
+                    }
+                )
+            }
+            prefs.edit().putString(KEY_PLAN_ITEMS, array.toString()).apply()
+        }
+
+    private var planCompletionsRaw: JSONObject
+        get() {
+            val raw = prefs.getString(KEY_PLAN_COMPLETIONS, null) ?: return JSONObject()
+            return try { JSONObject(raw) } catch (_: Exception) { JSONObject() }
+        }
+        set(value) = prefs.edit().putString(KEY_PLAN_COMPLETIONS, value.toString()).apply()
+
+    fun completedPlanIds(date: String): Set<String> {
+        val arr = planCompletionsRaw.optJSONArray(date) ?: return emptySet()
+        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+    }
+
+    fun setPlanItemDone(date: String, itemId: String, done: Boolean) {
+        val root = planCompletionsRaw
+        val current = completedPlanIds(date).toMutableSet()
+        if (done) current.add(itemId) else current.remove(itemId)
+        root.put(date, JSONArray(current.toList()))
+        planCompletionsRaw = root
+    }
+
+    /** The day whose term of the day has already been dismissed. */
+    var wordSeenDate: String
+        get() = prefs.getString(KEY_WORD_SEEN, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_WORD_SEEN, value).apply()
+
+    /**
+     * Plans used to be named containers of timed tasks. Those tasks are what the schedule is made
+     * of now, so the first run after the change lifts them out and drops the containers. Runs once:
+     * afterwards the flag is set even when there was nothing to carry over.
+     */
+    fun migratePlansIfNeeded() {
+        if (prefs.getBoolean(KEY_PLANS_MIGRATED, false)) return
+        if (planItems.isEmpty()) {
+            val flat = planTemplates
+                .flatMap { it.tasks }
+                .distinctBy { it.timeOfDay + it.title }
+                .map { task ->
+                    PlanItem(
+                        id = task.id,
+                        title = task.title,
+                        time = task.timeOfDay.ifBlank { "09:00" },
+                        minutes = task.durationMinutes,
+                        comment = ""
+                    )
+                }
+                .sortedBy { it.time }
+                .take(MAX_PLAN_ITEMS)
+            if (flat.isNotEmpty()) planItems = flat
+        }
+        prefs.edit().putBoolean(KEY_PLANS_MIGRATED, true).apply()
+    }
+
     var planTemplates: List<PlanTemplate>
         get() {
             val raw = prefs.getString(KEY_PLAN_TEMPLATES, null) ?: return emptyList()
@@ -980,6 +1083,10 @@ class PrefsManager(context: Context) {
         private const val KEY_ROUTINE_TASKS = "routine_tasks"
         private const val KEY_ROUTINE_COMPLETIONS = "routine_completions"
         private const val KEY_DAY_SUMMARIES = "day_summaries"
+        private const val KEY_PLAN_ITEMS = "plan_items"
+        private const val KEY_PLAN_COMPLETIONS = "plan_completions"
+        private const val KEY_PLANS_MIGRATED = "plans_migrated_v2"
+        private const val KEY_WORD_SEEN = "word_seen_date"
         private const val KEY_PLAN_TEMPLATES = "plan_templates"
         private const val KEY_ACTIVE_PLAN_TEMPLATE = "active_plan_template_id"
         private const val KEY_PLAN_HISTORY = "plan_history"
