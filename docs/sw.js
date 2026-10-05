@@ -1,8 +1,11 @@
-/* EPV service worker: offline shell via stale-while-revalidate for same-origin GETs. */
-const CACHE = 'epv-v1';
-const SHELL = ['./', 'index.html', 'css/style.css?v=1', 'js/data.js?v=1', 'js/store.js?v=1', 'js/ui.js?v=1', 'js/engine.js?v=1',
-  'js/screens-setup.js?v=1', 'js/screens-timer.js?v=1', 'js/screens-plans.js?v=1', 'js/screens-more.js?v=1', 'js/app.js?v=1',
-  'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+/*
+ * EPV service worker. The page itself is fetched network-first, so an update shows up on the
+ * next launch rather than the one after; everything else is served from cache and refreshed in
+ * the background. Offline, the cached copy of everything is used.
+ */
+const CACHE = 'epv-v2';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -13,13 +16,16 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).then((res) => {
+      if (res && res.ok) caches.open(CACHE).then((c) => c.put(req, res.clone()));
+      return res;
+    }).catch(() => caches.match(req).then((hit) => hit || caches.match('index.html'))));
+    return;
+  }
   e.respondWith(caches.open(CACHE).then(async (cache) => {
-    const cached = await cache.match(req, { ignoreSearch: false });
+    const cached = await cache.match(req);
     const network = fetch(req).then((res) => { if (res && res.ok) cache.put(req, res.clone()); return res; }).catch(() => cached);
     return cached || network;
   }));
-});
-self.addEventListener('notificationclick', (e) => {
-  e.notification.close();
-  e.waitUntil(self.clients.matchAll({ type: 'window' }).then((list) => (list.length ? list[0].focus() : self.clients.openWindow('./'))));
 });

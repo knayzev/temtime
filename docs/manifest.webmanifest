@@ -1,16 +1,17 @@
 {
-  "name": "EPV — таймер и планы на день",
+  "name": "EPV — таймер и план на день",
   "short_name": "EPV",
-  "description": "Таймер, планы на день и привычки для самодисциплины",
+  "description": "Таймер, план на день и ритуалы",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fbf8ff",
+  "background_color": "#fbf9ff",
   "theme_color": "#5b4fe9",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
   ]
 }

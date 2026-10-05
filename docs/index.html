@@ -1,29 +1,1261 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>EPV</title>
-  <meta name="description" content="EPV — таймер, планы на день и привычки для самодисциплины">
-  <meta name="theme-color" content="#5b4fe9">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="EPV">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css?v=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EPV</title>
+<meta name="description" content="EPV — таймер и план на день">
+<meta name="theme-color" content="#5b4fe9">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EPV">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@500;600;700;900&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #FBF9FF;
+    --card: #FFFFFF;
+    --soft: #F2EFFB;
+    --ink: #16141F;
+    --muted: #6B6880;
+    --line: #E4E0EE;
+    --indigo: #5B4FE9;
+    --indigo-ink: #FFFFFF;
+    --indigo-soft: #EDEAFF;
+    --indigo-on-soft: #2A1E8F;
+    --coral: #E4552E;
+    --teal: #00806C;
+    --teal-soft: #DDF3EE;
+    --shadow: 0 1px 2px rgba(22,20,31,.06), 0 10px 28px rgba(22,20,31,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #0F0E16; --card: #191826; --soft: #201E30;
+      --ink: #ECE9F5; --muted: #9C98AD; --line: #2B2839;
+      --indigo: #A79EFF; --indigo-ink: #17133A; --indigo-soft: #241F44; --indigo-on-soft: #CFC8FF;
+      --coral: #FF9878; --teal: #4FD1BC; --teal-soft: #16322D;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #0F0E16; --card: #191826; --soft: #201E30;
+    --ink: #ECE9F5; --muted: #9C98AD; --line: #2B2839;
+    --indigo: #A79EFF; --indigo-ink: #17133A; --indigo-soft: #241F44; --indigo-on-soft: #CFC8FF;
+    --coral: #FF9878; --teal: #4FD1BC; --teal-soft: #16322D;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px; line-height: 1.55;
+    display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  h1, h2, h3 { font-family: "Golos Text", system-ui, sans-serif; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; border-bottom: 1px solid var(--line);
+    background: var(--card); flex: none;
+  }
+  .topbar h1 { font-size: 17px; font-weight: 700; flex: 1; }
+  main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .page { max-width: 640px; margin: 0 auto; padding: 16px 16px 30px; }
+
+  nav.tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--line); background: var(--card); flex: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  nav.tabs button {
+    background: none; border: 0; cursor: pointer; padding: 8px 4px 10px;
+    display: grid; justify-items: center; gap: 3px;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+  }
+  nav.tabs button[aria-current="true"] { color: var(--indigo); }
+  nav.tabs svg { width: 21px; height: 21px; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+  .stack { display: grid; gap: 8px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .sec-title { font-size: 15px; font-weight: 700; font-family: "Golos Text", sans-serif; }
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+
+  label.field { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  input, select, textarea {
+    font: inherit; width: 100%; background: var(--card); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--indigo) 45%, transparent); outline-offset: 1px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--indigo); color: var(--indigo-ink); border: 0; border-radius: 13px;
+    padding: 13px 20px; font-weight: 600; cursor: pointer; text-decoration: none;
+  }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.ghost:hover:not([disabled]) { border-color: var(--indigo); color: var(--indigo); }
+  .btn.wide { width: 100%; }
+  .btn.sm { padding: 9px 14px; font-size: 14px; border-radius: 11px; }
+  .btn.dashed { background: transparent; color: var(--indigo); border: 1.5px dashed var(--line); }
+  .btn.dashed:hover { border-color: var(--indigo); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+    padding: 6px 12px; font-size: 13px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--indigo); color: var(--indigo); }
+
+  .pick { display: grid; gap: 5px; justify-items: center; border: 1px solid var(--line);
+    border-radius: 18px; padding: 15px 10px; cursor: pointer; background: var(--card); }
+  .pick[aria-pressed="true"] { background: var(--indigo-soft); border-color: transparent; }
+  .pick .em { font-size: 25px; line-height: 1; }
+  .pick .lb { font-size: 14px; font-weight: 600; }
+
+  .steps-head { display: flex; gap: 6px; margin-bottom: 16px; }
+  .steps-head span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+  .steps-head span.on { background: var(--indigo); }
+
+  /* ---------- timer ---------- */
+  .dial { display: grid; place-items: center; position: relative; margin: 2px auto 0; width: 236px; max-width: 74vw; }
+  .dial svg { width: 100%; height: auto; transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: var(--indigo-soft); stroke-width: 14; }
+  .ring-prog { fill: none; stroke: var(--indigo); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray .6s linear; }
+  .dial.rest .ring-prog { stroke: var(--teal); }
+  .dial.rest .ring-track { stroke: var(--teal-soft); }
+  .dial-inner { position: absolute; display: grid; justify-items: center; text-align: center; padding: 0 26px; }
+  .dial-label {
+    font-family: "Golos Text", sans-serif; font-weight: 700; font-size: 14px; color: var(--indigo);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .dial.rest .dial-label { color: var(--teal); }
+  .dial-time { font-family: "Golos Text", sans-serif; font-weight: 900; font-size: 44px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .dial-sub { font-size: 11.5px; color: var(--muted); }
+
+  .acts { display: flex; gap: 24px; justify-content: center; margin-top: 16px; }
+  .act { display: grid; justify-items: center; gap: 5px; }
+  .act button { border: 0; cursor: pointer; border-radius: 50%; display: grid; place-items: center;
+    width: 54px; height: 54px; background: var(--soft); color: var(--ink); }
+  .act button[disabled] { opacity: .4; cursor: default; }
+  .act.primary button { width: 70px; height: 70px; background: var(--indigo); color: var(--indigo-ink); }
+  .act span { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* ---------- day list ---------- */
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 26px 0 4px; }
+  .progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-bottom: 12px; }
+  .progress i { display: block; height: 100%; background: var(--teal); border-radius: 3px; transition: width .3s ease; }
+
+  .prow {
+    display: grid; grid-template-columns: auto auto 1fr auto; gap: 10px; align-items: center;
+    background: var(--card); border: 1px solid var(--line); border-left: 3px solid transparent;
+    border-radius: 14px; padding: 9px 8px 9px 10px;
+  }
+  .prow.current { border-color: var(--indigo); border-left-color: var(--indigo); background: var(--indigo-soft); }
+  .prow.done { background: var(--soft); }
+  .prow.done .pt { text-decoration: line-through; color: var(--muted); }
+  .prow .time { font-size: 13px; font-weight: 600; color: var(--indigo); min-width: 42px;
+    font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+  .prow.done .time { color: var(--muted); }
+  .pt { font-size: 14.5px; min-width: 0; overflow-wrap: anywhere; text-align: left; }
+  .pt small { display: block; font-size: 12px; color: var(--muted); }
+  .body-btn { background: none; border: 0; padding: 0; cursor: pointer; min-width: 0; }
+  .tick {
+    width: 26px; height: 26px; border-radius: 9px; border: 2px solid var(--line); background: var(--card);
+    cursor: pointer; display: grid; place-items: center; padding: 0; color: transparent; flex: none;
+  }
+  .tick[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .mini { background: transparent; border: 0; cursor: pointer; color: var(--muted);
+    width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; }
+  .mini:hover { color: var(--indigo); background: var(--soft); }
+  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    background: var(--indigo); color: var(--indigo-ink); border-radius: 6px; padding: 2px 6px; }
+
+  /* ---------- rituals ---------- */
+  .rit { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
+    padding: 9px 10px; border-radius: 14px; background: var(--soft); }
+  .rit.done .rt { text-decoration: line-through; color: var(--muted); }
+  .rt { font-size: 14.5px; }
+
+  /* ---------- stats ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; }
+  .tile { background: var(--indigo-soft); border-radius: 16px; padding: 12px; }
+  .tile dt { font-size: 11px; font-weight: 600; color: var(--indigo-on-soft); opacity: .8; }
+  .tile dd { margin: 2px 0 0; font-family: "Golos Text", sans-serif; font-weight: 700; font-size: 15.5px; color: var(--indigo-on-soft); }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; background: var(--indigo); border-radius: 3px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 14px; }
+
+  .scrim { position: fixed; inset: 0; background: rgba(10,8,20,.5); display: grid; place-items: center; padding: 18px; z-index: 40; }
+  .sheet { background: var(--card); border-radius: 20px; padding: 18px; width: 100%; max-width: 400px; display: grid; gap: 12px; box-shadow: var(--shadow); max-height: 88vh; overflow-y: auto; }
+  .sheet h3 { font-size: 17px; font-weight: 700; }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 12px; font-size: 13.5px; z-index: 50; }
+  .word {
+    background: var(--teal-soft); border-radius: 16px; padding: 12px 10px 12px 14px; margin-bottom: 16px;
+  }
+  .word-w { font-family: "Golos Text", sans-serif; font-weight: 700; font-size: 16.5px; margin-top: 2px; }
+  .empty { text-align: center; padding: 22px 14px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
 </head>
 <body>
-  <div id="app"><noscript>Для работы EPV нужен включённый JavaScript.</noscript></div>
-  <div id="modal-root"></div>
-  <script src="js/data.js?v=1"></script>
-  <script src="js/store.js?v=1"></script>
-  <script src="js/ui.js?v=1"></script>
-  <script src="js/engine.js?v=1"></script>
-  <script src="js/screens-setup.js?v=1"></script>
-  <script src="js/screens-timer.js?v=1"></script>
-  <script src="js/screens-plans.js?v=1"></script>
-  <script src="js/screens-more.js?v=1"></script>
-  <script src="js/app.js?v=1"></script>
+
+<header class="topbar">
+  <h1 id="screen-title">EPV</h1>
+  <span class="small muted mono" id="sync-badge">локально</span>
+</header>
+
+<main id="main"><div class="page" id="view"></div></main>
+
+<nav class="tabs" id="tabs" hidden>
+  <button data-tab="today">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+    Сегодня
+  </button>
+  <button data-tab="rituals">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Ритуалы
+  </button>
+  <button data-tab="stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M7 21V10M12 21V4M17 21v-7"/></svg>
+    Статистика
+  </button>
+</nav>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   Library data
+   ===================================================================== */
+
+const PLAN_LIBRARY = [
+  ["Проснуться", 1, "06:30"], ["Стакан воды", 1, "06:35"], ["Зарядка", 15, "06:45"],
+  ["Растяжка", 10, "07:00"], ["Душ", 10, "07:15"], ["Завтрак", 25, "07:30"],
+  ["Планирование дня", 10, "08:00"], ["Медитация", 10, "08:10"], ["Дорога на работу", 30, "08:20"],
+  ["Глубокая работа", 90, "09:00"], ["Разбор почты", 20, "10:30"], ["Созвоны", 45, "11:00"],
+  ["Перекус", 10, "11:45"], ["Рабочий блок", 60, "12:00"], ["Обед", 40, "13:00"],
+  ["Прогулка после обеда", 20, "13:40"], ["Рабочий блок, вторая половина", 90, "14:00"],
+  ["Перерыв", 15, "15:30"], ["Учёба и развитие", 45, "16:00"], ["Разбор задач на завтра", 15, "17:30"],
+  ["Дорога домой", 30, "18:00"], ["Тренажёрный зал", 75, "18:30"], ["Душ после зала", 15, "20:00"],
+  ["Ужин", 30, "20:20"], ["Время с близкими", 45, "21:00"], ["Чтение", 30, "21:45"],
+  ["Прогулка перед сном", 20, "22:15"], ["Без экранов", 30, "22:35"],
+  ["Подготовка ко сну", 15, "23:00"], ["Отбой", 1, "23:15"]
+].map(([title, minutes, time]) => ({ title, minutes, time }));
+
+const QUICK_TITLES = ["Завтрак", "Зарядка", "Глубокая работа", "Созвоны", "Обед",
+  "Прогулка после обеда", "Рабочий блок", "Учёба и развитие", "Тренажёрный зал", "Ужин", "Чтение"];
+
+const MAX_PLANS = 20;
+const ANNOUNCE_LEAD_SECONDS = 15;
+
+const pubmed = (t) => "https://pubmed.ncbi.nlm.nih.gov/?term=" + encodeURIComponent(t.trim()).replace(/%20/g, "+");
+const H = {
+  peak: { text: "Самую трудную задачу ставьте в первые 2–3 часа после пробуждения — внимание и рабочая память в это время обычно на суточном пике.", source: "Schmidt et al., Cognitive Neuropsychology, 2007", url: pubmed("A time to think circadian rhythms in human cognition") },
+  block: { text: "Работайте блоками по 45–60 минут с короткими перерывами: даже краткое переключение восстанавливает внимание.", source: "Ariga, Lleras, Cognition, 2011", url: pubmed("Brief and rare mental breaks keep you focused") },
+  lunch: { text: "После обеда закономерно проседает бодрость. Ставьте сюда рутину и встречи, а не задачи на максимальной концентрации.", source: "Monk, Clinics in Sports Medicine, 2005", url: pubmed("The post-lunch dip in performance") },
+  walk: { text: "Прогулка заметно повышает продуктивность мышления — эффект сохраняется и после возвращения за стол.", source: "Oppezzo, Schwartz, JEP: LMC, 2014", url: pubmed("Give your ideas some legs the positive effect of walking on creative thinking") },
+  tomorrow: { text: "Выписать завтрашние дела перед сном — засыпание ускоряется: чем конкретнее список, тем сильнее эффект.", source: "Scullin et al., JEP: General, 2018", url: pubmed("The effects of bedtime writing on difficulty falling asleep") },
+  exercise: { text: "Регулярная нагрузка улучшает сон; интенсивная тренировка ближе чем за час до сна, наоборот, мешает уснуть.", source: "Stutz et al., Sports Medicine, 2019", url: pubmed("Effects of evening exercise on sleep in healthy participants") }
+};
+const it = (title, minutes, hint) => ({ title, minutes, hint: hint || null });
+
+const PROFESSIONS = [
+  { name: "Разработчик", emoji: "💻", summary: "Длинные непрерывные блоки кода утром, разборы и ревью — во второй половине дня.", items: [
+    it("Глубокая работа: главная задача", 90, H.peak), it("Перерыв без экрана", 15, H.block), it("Глубокая работа: продолжение", 60, H.block),
+    it("Разбор почты и задач", 30), it("Обед", 45, H.lunch), it("Код-ревью и обсуждения", 60, H.lunch),
+    it("Прогулка", 20, H.walk), it("Мелкие правки", 60), it("Итоги дня и план на завтра", 15, H.tomorrow) ] },
+  { name: "Дизайнер", emoji: "🎨", summary: "Творческие блоки без прерываний, правки — ближе к вечеру.", items: [
+    it("Референсы и идеи", 30), it("Основной блок: макеты", 90, H.peak), it("Перерыв, прогулка", 20, H.walk),
+    it("Обед", 45, H.lunch), it("Правки по фидбеку", 60, H.lunch), it("Созвоны и презентация", 45), it("Итоги дня и план на завтра", 15, H.tomorrow) ] },
+  { name: "Руководитель", emoji: "🧭", summary: "Встречи собраны в один блок, утро — под решения, которые нельзя делегировать.", items: [
+    it("Приоритеты дня, без почты", 20, H.peak), it("Стратегическая задача", 60, H.peak), it("Блок встреч", 120),
+    it("Обед", 45, H.lunch), it("Один на один с командой", 60, H.lunch), it("Разбор почты и решений", 45),
+    it("Прогулка", 20, H.walk), it("Итоги дня и план на завтра", 15, H.tomorrow) ] },
+  { name: "Продажи", emoji: "📞", summary: "Звонки в часы, когда клиенты доступнее всего; подготовка и CRM — вокруг них.", items: [
+    it("Подготовка списка и скриптов", 30), it("Блок звонков", 90, H.peak), it("Перерыв", 15, H.block),
+    it("Обед", 45, H.lunch), it("Второй блок звонков", 90), it("CRM и follow-up", 45, H.lunch), it("Разбор результатов дня", 20, H.tomorrow) ] },
+  { name: "Маркетолог", emoji: "📈", summary: "Аналитика и тексты — на пике внимания, запуски и согласования — после обеда.", items: [
+    it("Метрики за вчера", 20), it("Тексты и креативы", 90, H.peak), it("Перерыв, прогулка", 20, H.walk),
+    it("Обед", 45, H.lunch), it("Запуски и согласования", 60, H.lunch), it("Аналитика кампаний", 60), it("Итоги дня и план на завтра", 15, H.tomorrow) ] },
+  { name: "Студент", emoji: "🎓", summary: "Учебные блоки с повторением, тяжёлые предметы — в первой половине дня.", items: [
+    it("Сложный предмет", 60, H.peak), it("Перерыв", 15, H.block), it("Второй блок учёбы", 60, H.block),
+    it("Обед", 45, H.lunch), it("Повторение пройденного", 45, H.lunch), it("Прогулка или спорт", 40, H.exercise),
+    it("Домашние задания", 60), it("План на завтра", 15, H.tomorrow) ] },
+  { name: "Предприниматель", emoji: "🚀", summary: "Одна задача, двигающая бизнес, — до всех входящих. Операционка собрана в блок.", items: [
+    it("Задача, двигающая бизнес", 90, H.peak), it("Перерыв", 15, H.block), it("Встречи и переговоры", 90),
+    it("Обед", 45, H.lunch), it("Операционка и команда", 90, H.lunch), it("Прогулка", 20, H.walk), it("Цифры и итоги дня", 20, H.tomorrow) ] },
+  { name: "Фрилансер", emoji: "🧑‍💻", summary: "Клиентская работа в защищённых блоках, коммуникация — в отведённые окна.", items: [
+    it("Клиентский проект №1", 90, H.peak), it("Перерыв", 15, H.block), it("Окно для сообщений", 30),
+    it("Обед", 45, H.lunch), it("Клиентский проект №2", 90, H.lunch), it("Поиск заказов и счета", 45), it("Итоги дня и план на завтра", 15, H.tomorrow) ] },
+  { name: "Другое", emoji: "🗂️", summary: "Универсальный каркас: главный блок утром, рутина после обеда, разбор вечером.", items: [
+    it("Главная задача дня", 90, H.peak), it("Перерыв", 15, H.block), it("Рабочий блок", 60, H.block),
+    it("Обед", 45, H.lunch), it("Текущие дела", 60, H.lunch), it("Прогулка", 20, H.walk), it("Итоги дня и план на завтра", 15, H.tomorrow) ] }
+];
+
+const RITUAL_PERIODS = [
+  { id: "morning", title: "Утро", emoji: "🌅" }, { id: "day", title: "День", emoji: "☀️" },
+  { id: "evening", title: "Вечер", emoji: "🌆" }, { id: "night", title: "Перед сном", emoji: "🌙" }
+];
+const RITUAL_LIBRARY = [
+  ["r_water", "Выпить стакан воды", "💧", "morning"], ["r_exercise", "Сделать зарядку", "🤸", "morning"],
+  ["r_teeth", "Почистить зубы", "🪥", "morning"], ["r_shower", "Принять душ", "🚿", "morning"],
+  ["r_journal", "Записать мысли", "📓", "morning"], ["r_plan", "Составить план на день", "📝", "morning"],
+  ["r_break", "Перерыв без экрана", "☕", "day"], ["r_daywalk", "Выйти на воздух", "🌤️", "day"],
+  ["r_inbox", "Разобрать почту", "📥", "day"], ["r_eyes", "Гимнастика для глаз", "👀", "day"],
+  ["r_tidy", "Прибраться на столе", "🧹", "evening"], ["r_review", "Подвести итоги дня", "✅", "evening"],
+  ["r_planned", "Спланировать завтра", "🗓️", "evening"], ["r_family", "Время с близкими", "❤️", "evening"],
+  ["r_noscreen", "Убрать телефон", "📵", "night"], ["r_warmshower", "Тёплый душ", "🛁", "night"],
+  ["r_air", "Проветрить спальню", "🪟", "night"], ["r_read", "Чтение книги", "📖", "night"],
+  ["r_breath", "Дыхание 4-7-8", "🌬️", "night"]
+].map(([id, title, icon, period]) => ({ id, title, icon, period }));
+
+const FOCUS_WINDOWS = [
+  { label: "Первая половина", start: "08:00", end: "15:00" },
+  { label: "Вторая половина", start: "15:30", end: "19:00" }
+];
+
+/* =====================================================================
+   Helpers
+   ===================================================================== */
+
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad2 = (n) => String(n).padStart(2, "0");
+const clock = (sec) => pad2(Math.floor(Math.max(0, sec) / 60)) + ":" + pad2(Math.max(0, sec) % 60);
+const minsOf = (t) => { const p = String(t || "").split(":"); return (+p[0] || 0) * 60 + (+p[1] || 0); };
+const hhmm = (m) => pad2(Math.floor(m / 60) % 24) + ":" + pad2(m % 60);
+const dayKey = (d) => { const x = new Date(d); return x.getFullYear() + "-" + pad2(x.getMonth() + 1) + "-" + pad2(x.getDate()); };
+const startOfDay = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const DAY_MS = 86400000;
+
+function plural(n, one, few, many) {
+  const a = n % 100, b = n % 10;
+  if (a >= 11 && a <= 14) return many;
+  if (b === 1) return one;
+  if (b >= 2 && b <= 4) return few;
+  return many;
+}
+const daysWord = (n) => plural(n, "день", "дня", "дней");
+function dur(min) { const h = Math.floor(min / 60), m = min % 60; return h > 0 ? h + " ч " + (m ? m + " мин" : "") : m + " мин"; }
+function durSec(sec) { return dur(Math.round(sec / 60)); }
+const presetFor = (name) => PROFESSIONS.find((p) => p.name === name) || PROFESSIONS[PROFESSIONS.length - 1];
+const byTime = (list) => list.slice().sort((a, b) => minsOf(a.time) - minsOf(b.time));
+const nowMinutes = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+
+/**
+ * One term a day, picked from the day number so everyone sees the same one and it changes at
+ * midnight. The list is about attention, planning and sleep — the things the app is for.
+ */
+const WORDS = [
+  ["Прокрастинация", "Откладывание важного на потом при ясном понимании последствий."],
+  ["Циркадный ритм", "Внутренние сутки организма: когда вы бодры, а когда хотите спать."],
+  ["Глубокая работа", "Сосредоточенный труд без отвлечений — в нём растёт качество, а не объём."],
+  ["Переключение контекста", "Потеря внимания при прыжке между задачами: возврат стоит нескольких минут."],
+  ["Эффект Зейгарник", "Незакрытая задача держится в памяти и мешает отдыхать."],
+  ["Закон Паркинсона", "Работа занимает всё время, которое на неё отвели."],
+  ["Правило двух минут", "Если дело займёт меньше двух минут — сделайте его сразу, а не записывайте."],
+  ["Матрица Эйзенхауэра", "Разбор дел по двум осям: срочное или нет, важное или нет."],
+  ["Техника Помодоро", "Работа отрезками по 25 минут с короткими перерывами между ними."],
+  ["Инерция старта", "Самое трудное в задаче — первые пять минут, дальше идёт легче."],
+  ["Дофаминовая петля", "Быстрые награды от лент и уведомлений, вытесняющие долгие цели."],
+  ["Сонный долг", "Накопленная нехватка сна: одним выходным она не гасится."],
+  ["Социальный джетлаг", "Разрыв между режимом будней и выходных — организм живёт в двух часовых поясах."],
+  ["Хронотип", "Врождённая склонность рано вставать или поздно засыпать."],
+  ["Инерция сна", "Вялость в первые минуты после пробуждения. Это норма, а не недосып."],
+  ["Гигиена сна", "Привычки вокруг сна, от которых зависит, как быстро вы засыпаете."],
+  ["Послеобеденный спад", "Закономерное падение бодрости после обеда — планируйте сюда рутину."],
+  ["Эффект свежего старта", "Новая неделя или месяц сами повышают шансы взяться за отложенное."],
+  ["Планирование от конца", "Расчёт шагов назад от срока, а не вперёд от сегодня."],
+  ["Ошибка планирования", "Систематическая недооценка времени: почти всё занимает дольше, чем кажется."],
+  ["Буфер", "Запас времени между делами, который спасает расписание от обрушения."],
+  ["Однозадачность", "Делать одно дело за раз: многозадачности в мышлении не существует."],
+  ["Выгорание", "Истощение от долгой нагрузки без восстановления, а не обычная усталость."],
+  ["Активное повторение", "Проверять себя вместо перечитывания — запоминается заметно лучше."],
+  ["Интервальное повторение", "Возвращаться к материалу через растущие промежутки времени."],
+  ["Правило десяти минут", "Пообещайте себе десять минут дела — дальше обычно втягиваетесь."],
+  ["Расфокус", "Намеренное безделье без экрана, в котором приходят решения."],
+  ["Якорение привычки", "Новая привычка цепляется к уже существующей: после кофе — план на день."],
+  ["Временной блок", "Дело, которому отдан конкретный отрезок в календаре, а не место в списке."],
+  ["Минимальный шаг", "Версия задачи, настолько маленькая, что отказаться от неё труднее, чем сделать."]
+].map(([word, meaning]) => ({ word, meaning }));
+
+function wordOfTheDay() {
+  const dayNumber = Math.floor(startOfDay(Date.now()) / DAY_MS);
+  return WORDS[((dayNumber % WORDS.length) + WORDS.length) % WORDS.length];
+}
+
+/* =====================================================================
+   State
+   ===================================================================== */
+
+function blankState() {
+  return {
+    v: 2,
+    profile: { gender: "", age: "", weight: "", height: "", profession: "Другое", details: "" },
+    onboarded: false,
+    plans: [],              // { id, title, time: "09:00", minutes: 50, comment }
+    done: {},               // dateKey -> [planId]
+    rituals: { done: {} },  // dateKey -> [ritualId]
+    sessions: [],           // { id, startedAt, seconds, label, kind: 'plan'|'free' }
+    wordSeen: "",           // dateKey of the day's term the user has already dismissed
+    settings: { restMinutes: 5, freeMinutes: 25, speak: true }
+  };
+}
+
+let state = blankState();
+let store = null;
+let saveTimer = null, saveInFlight = false, saveAgain = false;
+const LS_KEY = "epv.state.v1";
+
+function readLocal() { try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
+function writeLocal(s) { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) { /* blocked storage */ } }
+
+/** Keeps what grows without bound inside the store's per-document size cap. */
+function trimmed(s) {
+  const c = JSON.parse(JSON.stringify(s));
+  c.sessions = c.sessions.slice(-400);
+  const cutoff = dayKey(Date.now() - 120 * DAY_MS);
+  const keep = (map) => { const o = {}; Object.keys(map || {}).forEach((k) => { if (k >= cutoff) o[k] = map[k]; }); return o; };
+  c.done = keep(c.done);
+  c.rituals.done = keep(c.rituals.done);
+  return c;
+}
+
+function save() {
+  writeLocal(state);
+  if (!store || store.kind !== "db") return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 600);
+}
+async function flush() {
+  if (!store || store.kind !== "db") return;
+  if (saveInFlight) { saveAgain = true; return; }
+  saveInFlight = true;
+  try { await store.ref.set(trimmed(state)); }
+  catch (e) { store = { kind: "local" }; setBadge("только здесь"); }
+  finally { saveInFlight = false; if (saveAgain) { saveAgain = false; flush(); } }
+}
+function setBadge(t) { const el = $("#sync-badge"); if (el) el.textContent = t; }
+
+/**
+ * Version 1 kept plans as named containers of timed items. A plan is now one timed block, so
+ * the old items become the plans and the container's name is dropped.
+ */
+function migrate(loaded) {
+  if (!loaded || loaded.v === 2) return loaded;
+  const out = blankState();
+  out.profile = Object.assign(out.profile, loaded.profile || {});
+  out.onboarded = !!loaded.onboarded;
+  const flat = [];
+  (loaded.plans || []).forEach((tpl) => {
+    (tpl.tasks || []).forEach((t) => {
+      flat.push({
+        id: t.id || ("p_" + Math.random().toString(36).slice(2)),
+        title: t.title || "Занятие",
+        time: t.timeOfDay || "09:00",
+        minutes: t.durationMinutes || 30,
+        comment: ""
+      });
+    });
+  });
+  // Several old plans could hold the same library item; one per time slot is enough.
+  const seen = new Set();
+  out.plans = byTime(flat).filter((p) => { const k = p.time + p.title; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, MAX_PLANS);
+  out.rituals.done = (loaded.rituals && loaded.rituals.done) || {};
+  out.sessions = (loaded.sessions || []).map((s) => ({
+    id: s.id, startedAt: s.startedAt, seconds: s.seconds,
+    label: s.category || "Фокус", kind: "free"
+  }));
+  if (loaded.settings) {
+    out.settings.restMinutes = loaded.settings.restMinutes || 5;
+    out.settings.freeMinutes = loaded.settings.workMinutes || 25;
+    out.settings.speak = loaded.settings.speakNext !== false;
+  }
+  return out;
+}
+
+function adopt(loaded) {
+  const data = migrate(loaded);
+  if (!data || typeof data !== "object") return;
+  const base = blankState();
+  state = Object.assign(base, data);
+  state.profile = Object.assign(base.profile, data.profile || {});
+  state.settings = Object.assign(base.settings, data.settings || {});
+  state.rituals = Object.assign(base.rituals, data.rituals || {});
+  state.plans = Array.isArray(data.plans) ? data.plans : [];
+  state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
+  state.done = data.done || {};
+}
+
+async function initStore() {
+  adopt(readLocal());
+  ui.route = state.onboarded ? "app" : "setup-profile";
+  render();
+
+  let db = null, user = null;
+  try { db = await window.claude?.use("db"); user = await window.claude?.use("user"); } catch (e) { db = null; }
+  let uid = null;
+  if (user) { try { uid = await user.id(); } catch (e) { uid = null; } }
+  if (!db || !uid) { store = { kind: "local" }; setBadge("на этом устройстве"); return; }
+
+  try {
+    const ref = db.doc("data/users/" + uid + "/state");
+    const snap = await ref.get();
+    if (snap.exists) { adopt(snap.data()); } else { await ref.set(trimmed(state)); }
+    store = { kind: "db", ref };
+    setBadge("синхронизировано");
+    writeLocal(state);
+    ui.route = state.onboarded ? "app" : "setup-profile";
+    render();
+  } catch (e) { store = { kind: "local" }; setBadge("на этом устройстве"); }
+}
+
+/* =====================================================================
+   Runtime UI state
+   ===================================================================== */
+
+const ui = {
+  route: "setup-profile",   // setup-profile | setup-schedule | app
+  tab: "today",
+  sheet: null,              // { kind, ... }
+  draft: [],                // schedule being built during setup
+  hints: [],
+  showHints: false,
+  toast: null,
+  // One timer serves every mode; `label` is what the ring shows.
+  timer: { mode: "idle", planId: null, label: "", secondsLeft: 0, total: 0, running: false, startedAt: null }
+};
+
+function toast(text) {
+  ui.toast = text;
+  render();
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { ui.toast = null; render(); }, 2300);
+}
+
+/** Speech is a courtesy, never a dependency: a browser without it must not affect the countdown. */
+function speak(text) {
+  if (!state.settings.speak) return;
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ru-RU";
+    synth.cancel();
+    synth.speak(u);
+  } catch (e) { /* no engine */ }
+}
+
+/* =====================================================================
+   Day helpers
+   ===================================================================== */
+
+const todayKey = () => dayKey(Date.now());
+const doneToday = () => state.done[todayKey()] || [];
+const isDone = (id) => doneToday().indexOf(id) >= 0;
+const todayPlans = () => byTime(state.plans);
+
+/** The plan the day is currently at: the first unfinished one, by time. */
+function nextPlan() {
+  return todayPlans().find((p) => !isDone(p.id)) || null;
+}
+function planAfter(id) {
+  const list = todayPlans().filter((p) => !isDone(p.id) || p.id === id);
+  const i = list.findIndex((p) => p.id === id);
+  return i >= 0 ? list.slice(i + 1).find((p) => !isDone(p.id)) || null : nextPlan();
+}
+
+function setDone(id, value) {
+  const key = todayKey();
+  const list = (state.done[key] || []).slice();
+  const i = list.indexOf(id);
+  if (value && i < 0) list.push(id);
+  if (!value && i >= 0) list.splice(i, 1);
+  state.done[key] = list;
+  save();
+}
+
+/* =====================================================================
+   Timer
+   ===================================================================== */
+
+function selectPlan(id) {
+  const p = state.plans.find((x) => x.id === id);
+  if (!p) return;
+  ui.timer = { mode: "plan", planId: p.id, label: p.title, secondsLeft: p.minutes * 60, total: p.minutes * 60, running: false, startedAt: null };
+}
+function selectFree() {
+  const m = state.settings.freeMinutes;
+  ui.timer = { mode: "free", planId: null, label: "Свободный фокус", secondsLeft: m * 60, total: m * 60, running: false, startedAt: null };
+}
+function selectRest() {
+  const m = state.settings.restMinutes;
+  ui.timer = { mode: "rest", planId: null, label: "Отдых", secondsLeft: m * 60, total: m * 60, running: true, startedAt: null };
+}
+function clearTimer() {
+  ui.timer = { mode: "idle", planId: null, label: "", secondsLeft: 0, total: 0, running: false, startedAt: null };
+}
+
+/** Only real work is recorded; rest is not an achievement and would inflate the totals. */
+function recordElapsed(t) {
+  if (t.mode === "rest" || !t.startedAt) return;
+  const elapsed = t.total - t.secondsLeft;
+  if (elapsed < 30) return;
+  state.sessions.push({ id: Date.now(), startedAt: t.startedAt, seconds: elapsed, label: t.label, kind: t.mode });
+  save();
+}
+
+function timerComplete() {
+  const t = ui.timer;
+  recordElapsed(t);
+
+  if (t.mode === "plan") {
+    setDone(t.planId, true);
+    const after = planAfter(t.planId);
+    selectRest();
+    toast(after ? "Готово. Отдых, потом «" + after.title + "»" : "Готово. Это был последний пункт");
+    render();
+    return;
+  }
+  if (t.mode === "rest") {
+    const next = nextPlan();
+    if (next) { selectPlan(next.id); toast("Дальше: " + next.title); }
+    else { clearTimer(); toast("На сегодня всё"); }
+    render();
+    return;
+  }
+  clearTimer();
+  toast("Блок закончен");
+  render();
+}
+
+function announceAhead() {
+  const t = ui.timer;
+  if (t.mode === "plan") {
+    const after = planAfter(t.planId);
+    if (after) speak("Через 15 секунд: " + after.title);
+  } else if (t.mode === "rest") {
+    const next = nextPlan();
+    if (next) speak("Через 15 секунд: " + next.title);
+  }
+}
+
+/* =====================================================================
+   Views
+   ===================================================================== */
+
+function viewSetupProfile() {
+  const p = state.profile;
+  const preset = presetFor(p.profession);
+  const ready = p.gender && String(p.age).trim();
+  return `
+    <div class="steps-head"><span class="on"></span><span></span></div>
+    <h2 style="font-size:25px;font-weight:900">Расскажите о себе</h2>
+    <p class="muted small" style="margin-top:6px">По этим данным соберём расписание и подскажем, что куда поставить.</p>
+
+    <div class="row" style="margin-top:18px">
+      <button class="pick" style="flex:1" data-gender="Мужской" aria-pressed="${p.gender === "Мужской"}"><span class="em">👨</span><span class="lb">Я мужчина</span></button>
+      <button class="pick" style="flex:1" data-gender="Женский" aria-pressed="${p.gender === "Женский"}"><span class="em">👩</span><span class="lb">Я женщина</span></button>
+    </div>
+
+    <div class="row" style="margin-top:14px;align-items:flex-end">
+      <label class="field" style="flex:1">Возраст<input type="number" inputmode="numeric" id="f-age" value="${esc(p.age)}"></label>
+      <label class="field" style="flex:1">Вес, кг<input type="number" inputmode="numeric" id="f-weight" value="${esc(p.weight)}"></label>
+      <label class="field" style="flex:1">Рост, см<input type="number" inputmode="numeric" id="f-height" value="${esc(p.height)}"></label>
+    </div>
+
+    <label class="field" style="margin-top:14px">Профессия
+      <select id="f-prof">${PROFESSIONS.map((x) => `<option${x.name === p.profession ? " selected" : ""}>${x.emoji} ${esc(x.name)}</option>`).join("")}</select>
+    </label>
+    <p class="small muted" style="margin-top:6px">${esc(preset.summary)}</p>
+
+    <label class="field" style="margin-top:14px">Во сколько встаёте
+      <input type="time" id="f-wake" value="${esc(state.profile.wake || "07:00")}">
+    </label>
+
+    <button class="btn wide" style="margin-top:22px" id="to-schedule" ${ready ? "" : "disabled"}>Собрать расписание</button>
+    ${ready ? "" : `<p class="small muted" style="margin-top:8px">Выберите пол и укажите возраст, чтобы продолжить.</p>`}
+  `;
+}
+
+function viewSetupSchedule() {
+  const total = ui.draft.reduce((s, p) => s + p.minutes, 0);
+  const list = byTime(ui.draft);
+  return `
+    <div class="steps-head"><span class="on"></span><span class="on"></span></div>
+    <h2 style="font-size:23px;font-weight:900">Ваш день</h2>
+    <p class="muted small" style="margin-top:6px">
+      ${list.length} ${plural(list.length, "пункт", "пункта", "пунктов")} · ${dur(total)}. Время и длительность можно менять — нажмите на пункт.
+    </p>
+
+    ${ui.hints.length ? `
+      <button class="btn ghost sm" style="margin-top:12px" id="toggle-hints">${ui.showHints ? "Скрыть «почему так»" : "Почему так"}</button>
+      ${ui.showHints ? `<div class="card" style="margin-top:8px;background:var(--teal-soft);border:0">
+        ${ui.hints.map((h) => `<div style="margin-bottom:10px">
+          <div style="font-weight:700;font-size:14px">${esc(h.title)}</div>
+          <div class="small">${esc(h.hint.text)}</div>
+          <a class="small" href="${esc(h.hint.url)}" style="color:var(--indigo)">${esc(h.hint.source)}</a>
+        </div>`).join("")}
+      </div>` : ""}` : ""}
+
+    <div class="stack" style="margin-top:14px">
+      ${list.map((p) => `
+        <div class="prow">
+          <span class="time">${p.time}</span>
+          <span></span>
+          <button class="body-btn pt" data-editdraft="${p.id}">${esc(p.title)}<small>${p.minutes} мин</small></button>
+          <button class="mini" data-deldraft="${p.id}" title="Убрать">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>`).join("")}
+    </div>
+
+    <button class="btn dashed wide sm" style="margin-top:10px" id="add-draft">+ Добавить пункт</button>
+    <button class="btn wide" style="margin-top:18px" id="finish-setup" ${list.length ? "" : "disabled"}>Начать день</button>
+  `;
+}
+
+function viewToday() {
+  const t = ui.timer;
+  const plans = todayPlans();
+  const done = doneToday();
+  const totalMin = plans.reduce((s, p) => s + p.minutes, 0);
+  const doneMin = plans.filter((p) => isDone(p.id)).reduce((s, p) => s + p.minutes, 0);
+  const next = nextPlan();
+  const C = 2 * Math.PI * 86;
+  const frac = t.total > 0 ? t.secondsLeft / t.total : 0;
+  const nowM = nowMinutes();
+
+  const idle = t.mode === "idle";
+  const dialLabel = idle ? (next ? next.title : "Свободно") : t.label;
+  const dialSub = idle
+    ? (next ? "по плану в " + next.time : "план на сегодня пуст")
+    : (t.mode === "rest" ? "перерыв" : (t.running ? "идёт" : "на паузе"));
+  const dialTime = idle ? (next ? clock(next.minutes * 60) : clock(state.settings.freeMinutes * 60)) : clock(t.secondsLeft);
+
+  const term = wordOfTheDay();
+  const showWord = state.wordSeen !== todayKey();
+
+  return `
+    ${showWord ? `<div class="word">
+      <div class="row" style="align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <p class="kicker" style="color:var(--teal)">Слово дня</p>
+          <p class="word-w">${esc(term.word)}</p>
+          <p class="small" style="margin-top:2px">${esc(term.meaning)}</p>
+        </div>
+        <button class="mini" id="word-hide" title="Скрыть до завтра">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>` : ""}
+
+    <div class="dial${t.mode === "rest" ? " rest" : ""}">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="ring-track" cx="100" cy="100" r="86"></circle>
+        <circle class="ring-prog" cx="100" cy="100" r="86" stroke-dasharray="${((idle ? 1 : frac) * C).toFixed(1)} ${C.toFixed(1)}"></circle>
+      </svg>
+      <div class="dial-inner">
+        <span class="dial-label">${esc(dialLabel)}</span>
+        <span class="dial-time">${dialTime}</span>
+        <span class="dial-sub">${esc(dialSub)}</span>
+      </div>
+    </div>
+
+    <div class="acts">
+      <div class="act">
+        <button id="t-stop" ${idle ? "disabled" : ""} title="Сбросить">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        </button>
+        <span>Сброс</span>
+      </div>
+      <div class="act primary">
+        <button id="t-toggle" title="${t.running ? "Пауза" : "Старт"}">
+          ${t.running
+            ? `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.4"/><rect x="14" y="5" width="4" height="14" rx="1.4"/></svg>`
+            : `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>`}
+        </button>
+        <span>${t.running ? "Пауза" : (idle && next ? "Начать" : "Старт")}</span>
+      </div>
+      <div class="act">
+        <button id="t-skip" ${idle ? "disabled" : ""} title="Пропустить">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5v13l9-6.5z"/><rect x="15" y="5" width="3" height="14" rx="1.2"/></svg>
+        </button>
+        <span>Дальше</span>
+      </div>
+    </div>
+
+    ${idle && next ? `<button class="btn ghost wide sm" style="margin-top:14px" id="t-free">Свободный фокус ${state.settings.freeMinutes} мин</button>` : ""}
+    ${!idle ? `<button class="btn ghost wide sm" style="margin-top:14px" id="t-voice">${state.settings.speak ? "🔊 Объявлять следующее за 15 сек" : "🔇 Объявления выключены"}</button>` : ""}
+
+    <div class="day-head">
+      <p class="sec-title">Сегодня</p>
+      <span class="small muted mono">${done.length}/${plans.length} · ${dur(doneMin)} из ${dur(totalMin)}</span>
+    </div>
+    <div class="progress"><i style="width:${plans.length ? (done.length / plans.length) * 100 : 0}%"></i></div>
+
+    ${plans.length === 0 ? `<div class="card empty">
+        <p style="font-weight:700;color:var(--ink)">План на день пуст</p>
+        <p class="small" style="margin-top:4px">Добавьте первый пункт — он появится здесь и запустится в таймере.</p>
+      </div>` : `<div class="stack">${plans.map((p) => renderPlanRow(p, nowM)).join("")}</div>`}
+
+    <button class="btn dashed wide sm" style="margin-top:12px" id="add-plan">+ Добавить занятие</button>
+    ${plans.length >= MAX_PLANS ? `<p class="small muted" style="margin-top:8px">Достигнут предел — ${MAX_PLANS} пунктов на день.</p>` : ""}
+  `;
+}
+
+function renderPlanRow(p, nowM) {
+  const done = isDone(p.id);
+  const current = ui.timer.planId === p.id && ui.timer.mode === "plan";
+  const isNext = !done && !current && nextPlan() && nextPlan().id === p.id;
+  const late = !done && !current && minsOf(p.time) + p.minutes < nowM;
+  return `
+    <div class="prow${current ? " current" : ""}${done ? " done" : ""}">
+      <button class="tick" data-tick="${p.id}" aria-pressed="${done}" title="${done ? "Снять отметку" : "Отметить сделанным"}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </button>
+      <span class="time">${p.time}</span>
+      <button class="body-btn pt" data-select="${p.id}" title="Загрузить в таймер">
+        ${esc(p.title)}${isNext ? ` <span class="tag">дальше</span>` : ""}
+        <small>${p.minutes} мин${p.comment ? " · " + esc(p.comment) : ""}${late ? " · просрочено" : ""}</small>
+      </button>
+      <button class="mini" data-editplan="${p.id}" title="Изменить">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
+    </div>`;
+}
+
+function viewRituals() {
+  const key = todayKey();
+  const done = new Set(state.rituals.done[key] || []);
+  const total = RITUAL_LIBRARY.length, d = RITUAL_LIBRARY.filter((t) => done.has(t.id)).length;
+  return `
+    <div class="card" style="background:var(--indigo-soft);border:0">
+      <p style="font-family:'Golos Text',sans-serif;font-weight:700;font-size:15px;color:var(--indigo-on-soft)">Сегодня ${d} из ${total}</p>
+      <div class="bar" style="background:rgba(0,0,0,.08)"><i style="width:${total ? (d / total) * 100 : 0}%"></i></div>
+    </div>
+    ${RITUAL_PERIODS.map((per) => {
+      const list = RITUAL_LIBRARY.filter((t) => t.period === per.id);
+      const dn = list.filter((t) => done.has(t.id)).length;
+      return `<div style="margin-top:18px">
+        <div class="row" style="justify-content:space-between">
+          <p class="sec-title">${per.emoji} ${per.title}</p>
+          <span class="small muted mono">${dn}/${list.length}</span>
+        </div>
+        <div class="stack" style="margin-top:8px">
+          ${list.map((t) => `<div class="rit${done.has(t.id) ? " done" : ""}">
+            <button class="tick" data-rtick="${t.id}" aria-pressed="${done.has(t.id)}" title="Отметить">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </button>
+            <span class="rt">${t.icon} ${esc(t.title)}</span>
+            <span></span>
+          </div>`).join("")}
+        </div>
+      </div>`;
+    }).join("")}
+  `;
+}
+
+function viewStats() {
+  const w = state.sessions;
+  const t0 = startOfDay(Date.now()), w0 = t0 - 6 * DAY_MS;
+  const m0 = (() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+  const sum = (l) => l.reduce((s, x) => s + x.seconds, 0);
+
+  const windows = FOCUS_WINDOWS.map((win) => {
+    const inW = w.filter((s) => { const d = new Date(s.startedAt); const m = d.getHours() * 60 + d.getMinutes(); return m >= minsOf(win.start) && m < minsOf(win.end); });
+    return { win, today: sum(inW.filter((s) => s.startedAt >= t0)), week: sum(inW.filter((s) => s.startedAt >= w0)), month: sum(inW.filter((s) => s.startedAt >= m0)) };
+  });
+
+  const byLabel = {};
+  w.forEach((s) => { const k = s.label || "Фокус"; byLabel[k] = (byLabel[k] || 0) + s.seconds; });
+  const labels = Object.entries(byLabel).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const largest = labels.length ? labels[0][1] : 1;
+
+  const activeDays = new Set(w.map((s) => startOfDay(s.startedAt)));
+  let streak = 0, cur = t0;
+  while (activeDays.has(cur)) { streak++; cur -= DAY_MS; }
+
+  // A day counts as kept when every plan on it was ticked off.
+  const planned = state.plans.length;
+  const keptDays = Object.keys(state.done).filter((k) => planned > 0 && (state.done[k] || []).length >= planned).length;
+
+  return `
+    <dl class="tiles">
+      <div class="tile"><dt>Сегодня</dt><dd>${durSec(sum(w.filter((s) => s.startedAt >= t0)))}</dd></div>
+      <div class="tile"><dt>Неделя</dt><dd>${durSec(sum(w.filter((s) => s.startedAt >= w0)))}</dd></div>
+      <div class="tile"><dt>Месяц</dt><dd>${durSec(sum(w.filter((s) => s.startedAt >= m0)))}</dd></div>
+    </dl>
+
+    <div class="card" style="margin-top:14px">
+      <p class="sec-title">Дисциплина</p>
+      <div class="kv"><span>Блоков пройдено</span><span>${w.length}</span></div>
+      <div class="kv"><span>Дней подряд с работой</span><span>${streak} ${daysWord(streak)}</span></div>
+      <div class="kv"><span>Дней план закрыт полностью</span><span>${keptDays}</span></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <p class="sec-title">Окна продуктивности</p>
+      <p class="small muted">Сегодня · неделя · месяц</p>
+      ${windows.map((s) => `<div style="padding:7px 0">
+        <div style="font-size:14px;font-weight:600">${s.win.label} · <span class="mono">${s.win.start}–${s.win.end}</span></div>
+        <div class="small muted mono">${durSec(s.today)} · ${durSec(s.week)} · ${durSec(s.month)}</div>
+      </div>`).join("")}
+    </div>
+
+    ${labels.length ? `<div class="card" style="margin-top:14px">
+      <p class="sec-title">На что уходит время</p>
+      ${labels.map(([name, sec]) => `<div style="padding:6px 0">
+        <div class="kv" style="padding:0"><span>${esc(name)}</span><span class="small muted">${durSec(sec)}</span></div>
+        <div class="bar"><i style="width:${Math.max(3, (sec / largest) * 100)}%"></i></div>
+      </div>`).join("")}
+    </div>` : `<div class="card empty" style="margin-top:14px">Пока нет пройденных блоков. Запустите пункт из расписания — время появится здесь.</div>`}
+
+    <div class="card" style="margin-top:14px">
+      <p class="sec-title">Таймер</p>
+      <div class="row" style="margin-top:8px">
+        <label class="field" style="flex:1">Свободный фокус, мин<input type="number" id="s-free" value="${state.settings.freeMinutes}" min="1" max="180"></label>
+        <label class="field" style="flex:1">Отдых, мин<input type="number" id="s-rest" value="${state.settings.restMinutes}" min="1" max="60"></label>
+      </div>
+    </div>
+  `;
+}
+
+function viewSheet() {
+  const s = ui.sheet;
+  if (!s) return "";
+  if (s.kind === "plan") {
+    const quick = QUICK_TITLES.map((t) => PLAN_LIBRARY.find((x) => x.title === t)).filter(Boolean);
+    return `<div class="scrim" data-scrim><div class="sheet">
+      <h3>${s.id ? "Изменить занятие" : "Новое занятие"}</h3>
+      ${s.id ? "" : `<div><p class="kicker">Быстрый выбор</p>
+        <div class="chips" style="margin-top:7px">${quick.map((q) => `<button class="chip" data-quickfill="${esc(q.title)}">${esc(q.title)}</button>`).join("")}</div>
+      </div>`}
+      <label class="field">Название<input type="text" id="sh-title" value="${esc(s.title)}" placeholder="Например, глубокая работа"></label>
+      <div class="row" style="align-items:flex-end">
+        <label class="field" style="flex:1">Время<input type="time" id="sh-time" value="${esc(s.time)}"></label>
+        <label class="field" style="flex:1">Длительность, мин<input type="number" id="sh-min" value="${s.minutes}" min="1" max="600"></label>
+      </div>
+      <label class="field">Комментарий<input type="text" id="sh-comment" value="${esc(s.comment || "")}" placeholder="Необязательно"></label>
+      <div class="row" style="justify-content:flex-end">
+        ${s.id && !s.draft ? `<button class="btn ghost sm" data-sheet-del>Удалить</button>` : ""}
+        <button class="btn ghost sm" data-sheet-cancel>Отмена</button>
+        <button class="btn sm" data-sheet-ok>Сохранить</button>
+      </div>
+    </div></div>`;
+  }
+  return "";
+}
+
+/* =====================================================================
+   Render
+   ===================================================================== */
+
+function render() {
+  const view = $("#view"), tabs = $("#tabs"), title = $("#screen-title");
+  if (!view) return;
+  let html = "", heading = "EPV", showTabs = false;
+
+  if (ui.route === "setup-profile") { html = viewSetupProfile(); heading = "Шаг 1 — о себе"; }
+  else if (ui.route === "setup-schedule") { html = viewSetupSchedule(); heading = "Шаг 2 — расписание"; }
+  else {
+    showTabs = true;
+    if (ui.tab === "today") { html = viewToday(); heading = "Сегодня"; }
+    else if (ui.tab === "rituals") { html = viewRituals(); heading = "Ритуалы"; }
+    else { html = viewStats(); heading = "Статистика"; }
+  }
+
+  view.innerHTML = html + viewSheet() + (ui.toast ? `<div class="toast">${esc(ui.toast)}</div>` : "");
+  title.textContent = heading;
+  writeTimer();
+  syncWakeLock();
+  tabs.hidden = !showTabs;
+  Array.prototype.forEach.call(tabs.querySelectorAll("button"), (b) => {
+    b.setAttribute("aria-current", String(showTabs && b.dataset.tab === ui.tab));
+  });
+}
+
+/**
+ * Updates the ring without a full re-render, so the second hand never costs a repaint. Off the
+ * Today tab, or under an open sheet, there is no ring to update — and a re-render would wipe
+ * whatever is being typed into the sheet.
+ */
+function tickDial() {
+  if (ui.route !== "app" || ui.tab !== "today" || ui.sheet) return;
+  const time = $(".dial-time"), prog = $(".ring-prog"), sub = $(".dial-sub");
+  if (!time || !prog) { render(); return; }
+  const t = ui.timer, C = 2 * Math.PI * 86;
+  time.textContent = clock(t.secondsLeft);
+  prog.setAttribute("stroke-dasharray", ((t.total ? t.secondsLeft / t.total : 0) * C).toFixed(1) + " " + C.toFixed(1));
+  if (sub) sub.textContent = t.mode === "rest" ? "перерыв" : (t.running ? "идёт" : "на паузе");
+}
+
+/* =====================================================================
+   Schedule building
+   ===================================================================== */
+
+function buildDraftFromProfession() {
+  const preset = presetFor(state.profile.profession);
+  const items = preset.items.slice();
+  const extra = (state.profile.details || "").trim();
+  if (extra) items.push(it(extra, 30));
+  let cursor = minsOf(state.profile.wake || "07:00") + 60;  // an hour to get going first
+  const stamp = Date.now();
+  ui.draft = items.map((item, i) => {
+    const at = Math.min(cursor, 23 * 60 + 30);
+    cursor += item.minutes;
+    return { id: "p_" + stamp + "_" + i, title: item.title, time: hhmm(at), minutes: item.minutes, comment: "" };
+  });
+  ui.hints = items.filter((x) => x.hint).map((x) => ({ title: x.title, hint: x.hint }));
+  ui.showHints = false;
+}
+
+/* =====================================================================
+   Events
+   ===================================================================== */
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("button,[data-scrim]");
+  if (!el) return;
+  const d = el.dataset || {};
+
+  if (el.hasAttribute("data-scrim")) { if (ev.target === el) { ui.sheet = null; render(); } return; }
+  if (el.hasAttribute("data-sheet-cancel")) { ui.sheet = null; render(); return; }
+  if (el.hasAttribute("data-sheet-ok")) { commitSheet(); return; }
+  if (el.hasAttribute("data-sheet-del")) {
+    state.plans = state.plans.filter((p) => p.id !== ui.sheet.id);
+    if (ui.timer.planId === ui.sheet.id) clearTimer();
+    ui.sheet = null; save(); render(); return;
+  }
+  if (d.quickfill) {
+    const lib = PLAN_LIBRARY.find((x) => x.title === d.quickfill);
+    $("#sh-title").value = lib.title;
+    $("#sh-time").value = lib.time;
+    $("#sh-min").value = lib.minutes;
+    return;
+  }
+
+  if (d.tab) { ui.tab = d.tab; render(); return; }
+  if (d.gender) { state.profile.gender = d.gender; save(); render(); return; }
+
+  switch (el.id) {
+    case "to-schedule": buildDraftFromProfession(); ui.route = "setup-schedule"; render(); return;
+    case "toggle-hints": ui.showHints = !ui.showHints; render(); return;
+    case "add-draft": ui.sheet = { kind: "plan", id: null, draft: true, title: "", time: "12:00", minutes: 30, comment: "" }; render(); return;
+    case "finish-setup":
+      state.plans = byTime(ui.draft).slice(0, MAX_PLANS);
+      state.onboarded = true;
+      ui.route = "app"; ui.tab = "today"; ui.draft = [];
+      save(); render(); return;
+    case "add-plan":
+      if (state.plans.length >= MAX_PLANS) { toast("Предел — " + MAX_PLANS + " пунктов на день"); return; }
+      ui.sheet = { kind: "plan", id: null, title: "", time: hhmm(Math.min(nowMinutes() + 30, 23 * 60 + 30)), minutes: 30, comment: "" };
+      render(); return;
+    case "t-toggle": {
+      const t = ui.timer;
+      if (t.mode === "idle") {
+        const next = nextPlan();
+        if (next) selectPlan(next.id); else selectFree();
+        ui.timer.running = true;
+        ui.timer.startedAt = Date.now();
+        // Speaking on a real click also unlocks speech in browsers that demand a gesture.
+        if (state.settings.speak) speak(ui.timer.label);
+        render();
+        return;
+      }
+      if (!t.running && !t.startedAt) t.startedAt = Date.now();
+      // Settle the remaining time before the clock stops or restarts from it.
+      if (t.running && t.endsAt) t.secondsLeft = Math.max(1, Math.ceil((t.endsAt - Date.now()) / 1000));
+      t.running = !t.running;
+      t.endsAt = t.running ? Date.now() + t.secondsLeft * 1000 : null;
+      render();
+      return;
+    }
+    case "t-stop": {
+      recordElapsed(ui.timer);
+      const t = ui.timer;
+      if (t.mode === "plan") selectPlan(t.planId); else clearTimer();
+      try { window.speechSynthesis?.cancel(); } catch (e) {}
+      render(); return;
+    }
+    case "t-skip": timerComplete(); return;
+    case "t-free": selectFree(); ui.timer.running = true; ui.timer.startedAt = Date.now(); render(); return;
+    case "word-hide": state.wordSeen = todayKey(); save(); render(); return;
+    case "t-voice":
+      state.settings.speak = !state.settings.speak;
+      if (state.settings.speak) speak("Объявления включены");
+      save(); render(); return;
+  }
+
+  if (d.select) { selectPlan(d.select); render(); return; }
+  if (d.tick) {
+    const willBeDone = !isDone(d.tick);
+    setDone(d.tick, willBeDone);
+    if (willBeDone && ui.timer.planId === d.tick) clearTimer();
+    render(); return;
+  }
+  if (d.editplan) {
+    const p = state.plans.find((x) => x.id === d.editplan);
+    ui.sheet = { kind: "plan", id: p.id, title: p.title, time: p.time, minutes: p.minutes, comment: p.comment || "" };
+    render(); return;
+  }
+  if (d.editdraft) {
+    const p = ui.draft.find((x) => x.id === d.editdraft);
+    ui.sheet = { kind: "plan", id: p.id, draft: true, title: p.title, time: p.time, minutes: p.minutes, comment: p.comment || "" };
+    render(); return;
+  }
+  if (d.deldraft) { ui.draft = ui.draft.filter((p) => p.id !== d.deldraft); render(); return; }
+  if (d.rtick) {
+    const key = todayKey();
+    const list = (state.rituals.done[key] || []).slice();
+    const i = list.indexOf(d.rtick);
+    if (i >= 0) list.splice(i, 1); else list.push(d.rtick);
+    state.rituals.done[key] = list;
+    save(); render(); return;
+  }
+});
+
+function commitSheet() {
+  const s = ui.sheet;
+  const title = ($("#sh-title").value || "").trim();
+  const time = $("#sh-time").value || "12:00";
+  const minutes = Math.max(1, parseInt($("#sh-min").value, 10) || 30);
+  const comment = ($("#sh-comment").value || "").trim();
+  if (!title) { $("#sh-title").focus(); return; }
+
+  const record = { id: s.id || "p_" + Date.now(), title, time, minutes, comment };
+
+  if (s.draft) {
+    ui.draft = s.id ? ui.draft.map((p) => (p.id === s.id ? record : p)) : ui.draft.concat([record]);
+  } else {
+    state.plans = s.id ? state.plans.map((p) => (p.id === s.id ? record : p)) : state.plans.concat([record]);
+    // A plan loaded in the timer keeps its new length when it has not started yet.
+    if (ui.timer.planId === record.id && !ui.timer.running && !ui.timer.startedAt) selectPlan(record.id);
+    save();
+  }
+  ui.sheet = null;
+  render();
+}
+
+document.addEventListener("input", (ev) => {
+  const v = ev.target.value;
+  switch (ev.target.id) {
+    case "f-age": state.profile.age = v; save(); break;
+    case "f-weight": state.profile.weight = v; save(); break;
+    case "f-height": state.profile.height = v; save(); break;
+    case "s-free":
+      state.settings.freeMinutes = Math.max(1, parseInt(v, 10) || 25);
+      save(); break;
+    case "s-rest":
+      state.settings.restMinutes = Math.max(1, parseInt(v, 10) || 5);
+      save(); break;
+  }
+});
+
+document.addEventListener("change", (ev) => {
+  if (ev.target.id === "f-prof") {
+    // The option text carries the emoji; the stored name must not.
+    state.profile.profession = ev.target.value.replace(/^\S+\s/, "");
+    save(); render();
+  } else if (ev.target.id === "f-wake") {
+    state.profile.wake = ev.target.value;
+    save();
+  }
+});
+
+/* =====================================================================
+   One tick drives the countdown
+   ===================================================================== */
+
+/**
+ * The countdown is measured against the wall clock, not counted in ticks: a phone freezes the
+ * page while the screen is locked, and the timer has to be right the moment it wakes up.
+ */
+function tick() {
+  const t = ui.timer;
+  if (t.mode === "idle") return;
+  if (!t.running) { t.endsAt = null; return; }
+  if (!t.endsAt) t.endsAt = Date.now() + t.secondsLeft * 1000;
+  const before = t.secondsLeft;
+  t.secondsLeft = Math.max(0, Math.ceil((t.endsAt - Date.now()) / 1000));
+  if (before > ANNOUNCE_LEAD_SECONDS && t.secondsLeft <= ANNOUNCE_LEAD_SECONDS && t.secondsLeft > 0) announceAhead();
+  if (t.secondsLeft <= 0) { timerComplete(); return; }
+  writeTimer();
+  tickDial();
+}
+setInterval(tick, 1000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) tick();
+  syncWakeLock();
+});
+
+/* =====================================================================
+   Surviving a restart: the phone may unload the page in the background
+   ===================================================================== */
+
+const TIMER_KEY = "epv.timer.v1";
+function writeTimer() { try { localStorage.setItem(TIMER_KEY, JSON.stringify(ui.timer)); } catch (e) { /* blocked storage */ } }
+function readTimer() {
+  try {
+    const t = JSON.parse(localStorage.getItem(TIMER_KEY) || "null");
+    if (t && t.mode && t.mode !== "idle" && typeof t.secondsLeft === "number") ui.timer = t;
+  } catch (e) { /* nothing to restore */ }
+}
+
+/** Keeps the screen on while a block runs, as the Android app does; the countdown stays visible. */
+let wakeLock = null, wakeLockPending = false;
+async function syncWakeLock() {
+  const want = ui.timer.running && ui.timer.mode !== "idle" && !document.hidden;
+  if (wakeLockPending) return;
+  try {
+    if (want && !wakeLock && navigator.wakeLock) {
+      wakeLockPending = true;
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    } else if (!want && wakeLock) {
+      const lock = wakeLock;
+      wakeLock = null;
+      await lock.release();
+    }
+  } catch (e) { wakeLock = null; }
+  finally { wakeLockPending = false; }
+}
+
+/* =====================================================================
+   Boot
+   ===================================================================== */
+
+readTimer();
+render();
+initStore();
+tick();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+</script>
 </body>
 </html>
