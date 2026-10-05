@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>EPV</title>
 <meta name="description" content="EPV — таймер и план на день">
-<meta name="theme-color" content="#5b4fe9">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1012" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="EPV">
@@ -13,208 +14,263 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@500;600;700;900&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap">
 <style>
+  /* Black carries actions and selection, greys carry surfaces, and one soft blue is kept for
+     progress and for whatever is live: the entry in the timer, the rest phase. */
   :root {
     color-scheme: light;
-    --paper: #FBF9FF;
+    --paper: #FFFFFF;
     --card: #FFFFFF;
-    --soft: #F2EFFB;
-    --ink: #16141F;
-    --muted: #6B6880;
-    --line: #E4E0EE;
-    --indigo: #5B4FE9;
-    --indigo-ink: #FFFFFF;
-    --indigo-soft: #EDEAFF;
-    --indigo-on-soft: #2A1E8F;
-    --coral: #E4552E;
-    --teal: #00806C;
-    --teal-soft: #DDF3EE;
-    --shadow: 0 1px 2px rgba(22,20,31,.06), 0 10px 28px rgba(22,20,31,.08);
+    --soft: #F4F5F7;
+    --soft-high: #EDEEF1;
+    --track: #E4E6EA;
+    --ink: #111114;
+    --muted: #5C6069;
+    --line: #E1E3E8;
+    --ring: #9498A1;
+    --accent: #111114;
+    --on-accent: #FFFFFF;
+    --accent-soft: #E9EBF0;
+    --blue: #3B6FD8;
+    --blue-soft: #E6EEFC;
+    --on-blue-soft: #0F2A5C;
+    --danger: #C62828;
+    --shadow: 0 1px 2px rgba(17,17,20,.06), 0 12px 32px rgba(17,17,20,.14);
   }
+  /* On the dark theme the accent turns white, so whatever sits on it takes --on-accent. */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --paper: #0F0E16; --card: #191826; --soft: #201E30;
-      --ink: #ECE9F5; --muted: #9C98AD; --line: #2B2839;
-      --indigo: #A79EFF; --indigo-ink: #17133A; --indigo-soft: #241F44; --indigo-on-soft: #CFC8FF;
-      --coral: #FF9878; --teal: #4FD1BC; --teal-soft: #16322D;
-      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+      --paper: #0F1012; --card: #0F1012; --soft: #17181B; --soft-high: #1F2024; --track: #2A2C31;
+      --ink: #ECEDEF; --muted: #A9ADB6; --line: #2F3238; --ring: #6B6F78;
+      --accent: #F2F3F5; --on-accent: #111114; --accent-soft: #2B2D33;
+      --blue: #8FB2F5; --blue-soft: #1F3563; --on-blue-soft: #DCE7FD; --danger: #FFB4AB;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --paper: #0F0E16; --card: #191826; --soft: #201E30;
-    --ink: #ECE9F5; --muted: #9C98AD; --line: #2B2839;
-    --indigo: #A79EFF; --indigo-ink: #17133A; --indigo-soft: #241F44; --indigo-on-soft: #CFC8FF;
-    --coral: #FF9878; --teal: #4FD1BC; --teal-soft: #16322D;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+    --paper: #0F1012; --card: #0F1012; --soft: #17181B; --soft-high: #1F2024; --track: #2A2C31;
+    --ink: #ECEDEF; --muted: #A9ADB6; --line: #2F3238; --ring: #6B6F78;
+    --accent: #F2F3F5; --on-accent: #111114; --accent-soft: #2B2D33;
+    --blue: #8FB2F5; --blue-soft: #1F3563; --on-blue-soft: #DCE7FD; --danger: #FFB4AB;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45);
   }
 
   html, body { height: 100%; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
-    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-    font-size: 15px; line-height: 1.55;
+    font-family: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px; line-height: 1.5;
     display: flex; flex-direction: column;
     -webkit-font-smoothing: antialiased;
   }
   * { box-sizing: border-box; }
-  h1, h2, h3 { font-family: "Golos Text", system-ui, sans-serif; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+  /* The bars set their own display, which would otherwise win over the hidden attribute. */
+  [hidden] { display: none !important; }
+  h1, h2, h3 { margin: 0; letter-spacing: -.01em; text-wrap: balance; }
   p { margin: 0; }
-  button { font: inherit; color: inherit; }
-  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+  .mono { font-variant-numeric: tabular-nums; }
 
   .topbar {
     display: flex; align-items: center; gap: 10px;
-    padding: 13px 16px; border-bottom: 1px solid var(--line);
-    background: var(--card); flex: none;
+    padding: 14px 20px; background: var(--paper); flex: none;
   }
-  .topbar h1 { font-size: 17px; font-weight: 700; flex: 1; }
+  .topbar h1 { font-size: 20px; font-weight: 600; flex: 1; }
   main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .page { max-width: 640px; margin: 0 auto; padding: 16px 16px 30px; }
+  .page { max-width: 640px; margin: 0 auto; padding: 12px 20px 30px; }
 
   nav.tabs {
     display: grid; grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--line); background: var(--card); flex: none;
+    border-top: 1px solid var(--line); background: var(--paper); flex: none;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   nav.tabs button {
     background: none; border: 0; cursor: pointer; padding: 8px 4px 10px;
     display: grid; justify-items: center; gap: 3px;
-    font-size: 11px; font-weight: 600; color: var(--muted);
+    font-size: 12px; font-weight: 500; color: var(--muted);
   }
-  nav.tabs button[aria-current="true"] { color: var(--indigo); }
-  nav.tabs svg { width: 21px; height: 21px; }
+  nav.tabs button[aria-current="true"] { color: var(--ink); font-weight: 700; }
+  /* The active tab is marked by a grey pill behind its icon, not by colour alone. */
+  nav.tabs svg { width: 60px; height: 30px; padding: 4px 19px; border-radius: 999px; }
+  nav.tabs button[aria-current="true"] svg { background: var(--accent-soft); }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 16px; }
+  .card.grey { background: var(--soft); border-color: transparent; }
+  .card.hints { background: var(--blue-soft); color: var(--on-blue-soft); border-color: transparent; }
+  .card.hints a { color: inherit; }
   .stack { display: grid; gap: 8px; }
   .row { display: flex; gap: 10px; align-items: center; }
   .muted { color: var(--muted); }
   .small { font-size: 13px; }
-  .sec-title { font-size: 15px; font-weight: 700; font-family: "Golos Text", sans-serif; }
-  .kicker { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .sec-title { font-size: 16px; font-weight: 600; }
+  .kicker { font-size: 12px; font-weight: 500; letter-spacing: .03em; color: var(--muted); }
 
-  label.field { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  label.field { display: grid; gap: 5px; font-size: 13px; font-weight: 500; color: var(--muted); }
   input, select, textarea {
     font: inherit; width: 100%; background: var(--card); color: var(--ink);
-    border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px;
+    border: 1px solid var(--ring); border-radius: 12px; padding: 12px 14px;
   }
+  /* On a grey panel a white field would read as a hole, so there the field is only an outline. */
+  .sheet input, .settings input { background: transparent; }
   textarea { resize: vertical; min-height: 70px; }
   input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--indigo) 45%, transparent); outline-offset: 1px;
+    outline: 3px solid color-mix(in srgb, var(--blue) 55%, transparent); outline-offset: 1px;
   }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    background: var(--indigo); color: var(--indigo-ink); border: 0; border-radius: 13px;
-    padding: 13px 20px; font-weight: 600; cursor: pointer; text-decoration: none;
+    background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent);
+    border-radius: 999px; padding: 11px 22px; font-weight: 600; font-size: 14px;
+    cursor: pointer; text-decoration: none;
   }
-  .btn[disabled] { opacity: .45; cursor: not-allowed; }
-  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-  .btn.ghost:hover:not([disabled]) { border-color: var(--indigo); color: var(--indigo); }
-  .btn.wide { width: 100%; }
-  .btn.sm { padding: 9px 14px; font-size: 14px; border-radius: 11px; }
-  .btn.dashed { background: transparent; color: var(--indigo); border: 1.5px dashed var(--line); }
-  .btn.dashed:hover { border-color: var(--indigo); }
+  .btn[disabled] { opacity: .38; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--ring); }
+  .btn.text { background: transparent; color: var(--ink); border-color: transparent; padding-inline: 12px; }
+  .btn.text.danger { color: var(--danger); }
+  .btn.wide { width: 100%; min-height: 52px; }
+  .btn.sm { padding: 9px 18px; }
+  .btn.wide.sm { min-height: 44px; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 7px; }
   .chip {
-    border: 1px solid var(--line); background: var(--card); border-radius: 999px;
-    padding: 6px 12px; font-size: 13px; cursor: pointer;
+    border: 0; background: var(--card); color: var(--ink); border-radius: 999px;
+    padding: 7px 12px; font-size: 13px; cursor: pointer;
   }
-  .chip:hover { border-color: var(--indigo); color: var(--indigo); }
+  /* The chip that filled the fields stays black, so it is clear where the values came from. */
+  .chip.on { background: var(--accent); color: var(--on-accent); }
 
-  .pick { display: grid; gap: 5px; justify-items: center; border: 1px solid var(--line);
-    border-radius: 18px; padding: 15px 10px; cursor: pointer; background: var(--card); }
-  .pick[aria-pressed="true"] { background: var(--indigo-soft); border-color: transparent; }
-  .pick .em { font-size: 25px; line-height: 1; }
+  .pick { display: grid; gap: 6px; justify-items: center; border: 1px solid var(--line);
+    border-radius: 20px; padding: 16px 10px; cursor: pointer; background: var(--card); color: var(--muted); }
+  /* The border carries the choice: a grey hairline at rest, black once picked. */
+  .pick[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent);
+    box-shadow: inset 0 0 0 .5px var(--accent); color: var(--ink); }
+  .pick .em { font-size: 28px; line-height: 1; }
   .pick .lb { font-size: 14px; font-weight: 600; }
+  .pick .ck { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--ring);
+    display: grid; place-items: center; color: transparent; }
+  .pick[aria-pressed="true"] .ck { border-color: var(--accent); color: var(--accent); }
 
-  .steps-head { display: flex; gap: 6px; margin-bottom: 16px; }
-  .steps-head span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
-  .steps-head span.on { background: var(--indigo); }
+  /* ---------- setup ---------- */
+  .brand { display: flex; align-items: center; gap: 12px; margin: 8px 0 20px; }
+  .brand-mark { width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--on-accent);
+    display: grid; place-items: center; flex: none; }
+  .brand b { display: block; font-size: 20px; font-weight: 600; line-height: 1.25; }
+  .brand small { display: block; font-size: 12px; color: var(--muted); }
+
+  .stepper { margin-bottom: 20px; }
+  .st-row { display: flex; align-items: center; }
+  .st-row i { flex: 1; height: 2px; background: var(--track); }
+  .st-row i.on { background: var(--accent); }
+  .st { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    font-size: 14px; font-weight: 700; background: var(--soft-high); color: var(--muted); }
+  .st.on { background: var(--accent); color: var(--on-accent); }
+  .st-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); }
+  .st-labels .on { color: var(--ink); font-weight: 700; }
 
   /* ---------- timer ---------- */
-  .dial { display: grid; place-items: center; position: relative; margin: 2px auto 0; width: 236px; max-width: 74vw; }
+  .dial { display: grid; place-items: center; position: relative; margin: 8px auto 0; width: 232px; max-width: 72vw; }
   .dial svg { width: 100%; height: auto; transform: rotate(-90deg); }
-  .ring-track { fill: none; stroke: var(--indigo-soft); stroke-width: 14; }
-  .ring-prog { fill: none; stroke: var(--indigo); stroke-width: 14; stroke-linecap: round; transition: stroke-dasharray .6s linear; }
-  .dial.rest .ring-prog { stroke: var(--teal); }
-  .dial.rest .ring-track { stroke: var(--teal-soft); }
-  .dial-inner { position: absolute; display: grid; justify-items: center; text-align: center; padding: 0 26px; }
+  .ring-track { fill: none; stroke: var(--accent); stroke-opacity: .12; stroke-width: 12; }
+  .ring-prog { fill: none; stroke: var(--accent); stroke-width: 12; stroke-linecap: round; transition: stroke-dasharray .6s linear; }
+  .dial.rest .ring-prog, .dial.rest .ring-track { stroke: var(--blue); }
+  .dial-inner { position: absolute; display: grid; justify-items: center; text-align: center; padding: 0 34px; }
   .dial-label {
-    font-family: "Golos Text", sans-serif; font-weight: 700; font-size: 14px; color: var(--indigo);
+    font-weight: 700; font-size: 16px; line-height: 1.35; color: var(--accent);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .dial.rest .dial-label { color: var(--teal); }
-  .dial-time { font-family: "Golos Text", sans-serif; font-weight: 900; font-size: 44px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-  .dial-sub { font-size: 11.5px; color: var(--muted); }
+  .dial.rest .dial-label { color: var(--blue); }
+  .dial-time { font-weight: 700; font-size: 52px; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .dial-sub { font-size: 12px; color: var(--muted); }
 
-  .acts { display: flex; gap: 24px; justify-content: center; margin-top: 16px; }
-  .act { display: grid; justify-items: center; gap: 5px; }
+  .acts { display: flex; gap: 28px; justify-content: center; align-items: flex-start; margin-top: 18px; }
+  .act { display: grid; justify-items: center; gap: 6px; }
   .act button { border: 0; cursor: pointer; border-radius: 50%; display: grid; place-items: center;
-    width: 54px; height: 54px; background: var(--soft); color: var(--ink); }
+    width: 56px; height: 56px; background: var(--soft); color: var(--ink); }
+  /* The side buttons are smaller; the offset puts their centres on the line of the main one. */
+  .act:not(.primary) button { margin-top: 8px; }
   .act button[disabled] { opacity: .4; cursor: default; }
-  .act.primary button { width: 70px; height: 70px; background: var(--indigo); color: var(--indigo-ink); }
-  .act span { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .act.primary button { width: 72px; height: 72px; background: var(--accent); color: var(--on-accent); }
+  .act span { font-size: 12px; font-weight: 500; color: var(--muted); }
+
+  /* Everything about the timer that is set once and then left alone, folded into one line. */
+  .settings { background: var(--soft); border-radius: 16px; margin-top: 20px; }
+  .settings-head { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0;
+    cursor: pointer; padding: 12px 16px; text-align: left; border-radius: 16px; }
+  .settings-head .tx { flex: 1; min-width: 0; }
+  .settings-head b { display: block; font-size: 14px; font-weight: 600; }
+  .settings-head small { font-size: 12px; color: var(--muted); }
+  .settings-body { display: grid; gap: 12px; padding: 2px 16px 16px; }
 
   /* ---------- day list ---------- */
-  .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 26px 0 4px; }
-  .progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-bottom: 12px; }
-  .progress i { display: block; height: 100%; background: var(--teal); border-radius: 3px; transition: width .3s ease; }
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 24px 0 6px; }
+  .progress { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-bottom: 10px; }
+  .progress i { display: block; height: 100%; background: var(--blue); border-radius: 3px; transition: width .3s ease; }
 
+  /* A bordered card: white while the entry waits, blue while it is in the timer, grey once done. */
   .prow {
-    display: grid; grid-template-columns: auto auto 1fr auto; gap: 10px; align-items: center;
-    background: var(--card); border: 1px solid var(--line); border-left: 3px solid transparent;
-    border-radius: 14px; padding: 9px 8px 9px 10px;
+    display: grid; grid-template-columns: auto auto 1fr auto; gap: 6px; align-items: center;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 8px 4px;
   }
-  .prow.current { border-color: var(--indigo); border-left-color: var(--indigo); background: var(--indigo-soft); }
-  .prow.done { background: var(--soft); }
+  .prow.plain { padding-left: 14px; }
+  .prow.current { border-color: var(--blue); background: var(--blue-soft); }
+  .prow.done { background: var(--soft); border-color: transparent; }
   .prow.done .pt { text-decoration: line-through; color: var(--muted); }
-  .prow .time { font-size: 13px; font-weight: 600; color: var(--indigo); min-width: 42px;
-    font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+  .prow .time { font-size: 14px; font-weight: 600; color: var(--ink); min-width: 46px; font-variant-numeric: tabular-nums; }
+  .prow.current .time { color: var(--blue); }
   .prow.done .time { color: var(--muted); }
-  .pt { font-size: 14.5px; min-width: 0; overflow-wrap: anywhere; text-align: left; }
-  .pt small { display: block; font-size: 12px; color: var(--muted); }
+  .pt { font-size: 15px; min-width: 0; overflow-wrap: anywhere; text-align: left; color: var(--ink); }
+  /* An inline block rather than a block, so the strike-through of a finished title stops at the
+     title and does not run through the minutes under it. */
+  .pt small { display: inline-block; width: 100%; font-size: 12px; color: var(--muted); }
   .body-btn { background: none; border: 0; padding: 0; cursor: pointer; min-width: 0; }
+  /* The ring keeps an empty tick visible on a white card; the button around it is the tap target. */
   .tick {
-    width: 26px; height: 26px; border-radius: 9px; border: 2px solid var(--line); background: var(--card);
-    cursor: pointer; display: grid; place-items: center; padding: 0; color: transparent; flex: none;
+    width: 40px; height: 40px; border: 0; background: none; border-radius: 50%;
+    cursor: pointer; display: grid; place-items: center; padding: 0; flex: none;
   }
-  .tick[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .tick i { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ring); background: var(--card);
+    display: grid; place-items: center; color: transparent; }
+  .prow.current .tick i { border-color: var(--blue); }
+  .tick[aria-pressed="true"] i { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .mini { background: transparent; border: 0; cursor: pointer; color: var(--muted);
-    width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; }
-  .mini:hover { color: var(--indigo); background: var(--soft); }
-  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-    background: var(--indigo); color: var(--indigo-ink); border-radius: 6px; padding: 2px 6px; }
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; }
+  .mini:hover { color: var(--ink); background: var(--soft); }
+  .tag { font-size: 11px; font-weight: 600; background: var(--accent); color: var(--on-accent); border-radius: 6px; padding: 1px 6px; }
 
   /* ---------- rituals ---------- */
-  .rit { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
-    padding: 9px 10px; border-radius: 14px; background: var(--soft); }
+  .rit { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center;
+    padding: 6px 12px 6px 4px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+  .rit.done { background: var(--soft); border-color: transparent; }
   .rit.done .rt { text-decoration: line-through; color: var(--muted); }
-  .rt { font-size: 14.5px; }
+  .rt { font-size: 15px; }
 
   /* ---------- stats ---------- */
   .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; }
-  .tile { background: var(--indigo-soft); border-radius: 16px; padding: 12px; }
-  .tile dt { font-size: 11px; font-weight: 600; color: var(--indigo-on-soft); opacity: .8; }
-  .tile dd { margin: 2px 0 0; font-family: "Golos Text", sans-serif; font-weight: 700; font-size: 15.5px; color: var(--indigo-on-soft); }
-  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; }
-  .bar i { display: block; height: 100%; background: var(--indigo); border-radius: 3px; }
+  .tile { background: var(--accent-soft); border-radius: 18px; padding: 12px; }
+  .tile dt { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .tile dd { margin: 2px 0 0; font-weight: 700; font-size: 16px; color: var(--ink); }
+  .bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; background: var(--blue); border-radius: 3px; }
   .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 14px; }
 
-  .scrim { position: fixed; inset: 0; background: rgba(10,8,20,.5); display: grid; place-items: center; padding: 18px; z-index: 40; }
-  .sheet { background: var(--card); border-radius: 20px; padding: 18px; width: 100%; max-width: 400px; display: grid; gap: 12px; box-shadow: var(--shadow); max-height: 88vh; overflow-y: auto; }
-  .sheet h3 { font-size: 17px; font-weight: 700; }
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.32); display: grid; place-items: center; padding: 18px; z-index: 40; }
+  .sheet { background: var(--soft-high); border-radius: 28px; padding: 22px; width: 100%; max-width: 400px; display: grid; gap: 14px; box-shadow: var(--shadow); max-height: 88vh; overflow-y: auto; }
+  .sheet h3 { font-size: 20px; font-weight: 600; }
 
   .toast { position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(76px + env(safe-area-inset-bottom, 0px));
     background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 12px; font-size: 13.5px; z-index: 50; }
+  /* Read once and dismissed, so it sits under the schedule instead of pushing the timer down. */
   .word {
-    background: var(--teal-soft); border-radius: 16px; padding: 12px 10px 12px 14px; margin-bottom: 16px;
+    background: var(--blue-soft); color: var(--on-blue-soft); border-radius: 16px;
+    padding: 12px 8px 12px 16px; margin-top: 24px;
   }
-  .word-w { font-family: "Golos Text", sans-serif; font-weight: 700; font-size: 16.5px; margin-top: 2px; }
+  .word .kicker, .word .mini { color: inherit; }
+  .word-w { font-weight: 700; font-size: 16px; margin-top: 2px; }
   .empty { text-align: center; padding: 22px 14px; color: var(--muted); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -543,6 +599,7 @@ const ui = {
   draft: [],                // schedule being built during setup
   hints: [],
   showHints: false,
+  settingsOpen: false,      // the "timer settings" line on the Today tab
   toast: null,
   // One timer serves every mode; `label` is what the ring shows.
   timer: { mode: "idle", planId: null, label: "", secondsLeft: 0, total: 0, running: false, startedAt: null }
@@ -666,18 +723,43 @@ function announceAhead() {
    Views
    ===================================================================== */
 
+const CHECK_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+
+/** The three setup steps as connected circles; a finished step shows a tick instead of its number. */
+function stepper(current) {
+  const labels = ["О себе", "Расписание", "Готово"];
+  const circles = labels.map((_, i) => {
+    const n = i + 1;
+    const line = i > 0 ? `<i${n <= current ? ' class="on"' : ""}></i>` : "";
+    return line + `<span class="st${n <= current ? " on" : ""}">${n < current ? CHECK_SVG : n}</span>`;
+  }).join("");
+  return `<div class="stepper">
+    <div class="st-row">${circles}</div>
+    <div class="st-labels">${labels.map((l, i) => `<span${i + 1 === current ? ' class="on"' : ""}>${l}</span>`).join("")}</div>
+  </div>`;
+}
+
 function viewSetupProfile() {
   const p = state.profile;
   const preset = presetFor(p.profession);
   const ready = p.gender && String(p.age).trim();
+  const pick = (value, emoji, label) => `<button class="pick" style="flex:1" data-gender="${value}" aria-pressed="${p.gender === value}">
+        <span class="em">${emoji}</span><span class="lb">${label}</span><span class="ck">${CHECK_SVG}</span>
+      </button>`;
   return `
-    <div class="steps-head"><span class="on"></span><span></span></div>
-    <h2 style="font-size:25px;font-weight:900">Расскажите о себе</h2>
-    <p class="muted small" style="margin-top:6px">По этим данным соберём расписание и подскажем, что куда поставить.</p>
+    <div class="brand">
+      <span class="brand-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+      </span>
+      <div><b>EPV</b><small>Таймер и план на день</small></div>
+    </div>
+    ${stepper(1)}
+    <h2 style="font-size:22px;font-weight:700">Расскажите о себе</h2>
+    <p class="muted small" style="margin-top:4px">По этим данным соберём расписание и подскажем, что куда поставить.</p>
 
-    <div class="row" style="margin-top:18px">
-      <button class="pick" style="flex:1" data-gender="Мужской" aria-pressed="${p.gender === "Мужской"}"><span class="em">👨</span><span class="lb">Я мужчина</span></button>
-      <button class="pick" style="flex:1" data-gender="Женский" aria-pressed="${p.gender === "Женский"}"><span class="em">👩</span><span class="lb">Я женщина</span></button>
+    <div class="row" style="margin-top:18px;gap:12px">
+      ${pick("Мужской", "👨", "Я мужчина")}
+      ${pick("Женский", "👩", "Я женщина")}
     </div>
 
     <div class="row" style="margin-top:14px;align-items:flex-end">
@@ -704,25 +786,25 @@ function viewSetupSchedule() {
   const total = ui.draft.reduce((s, p) => s + p.minutes, 0);
   const list = byTime(ui.draft);
   return `
-    <div class="steps-head"><span class="on"></span><span class="on"></span></div>
-    <h2 style="font-size:23px;font-weight:900">Ваш день</h2>
-    <p class="muted small" style="margin-top:6px">
+    ${stepper(2)}
+    <h2 style="font-size:22px;font-weight:700">Ваш день</h2>
+    <p class="muted small" style="margin-top:4px">
       ${list.length} ${plural(list.length, "пункт", "пункта", "пунктов")} · ${dur(total)}. Время и длительность можно менять — нажмите на пункт.
     </p>
 
     ${ui.hints.length ? `
       <button class="btn ghost sm" style="margin-top:12px" id="toggle-hints">${ui.showHints ? "Скрыть «почему так»" : "Почему так"}</button>
-      ${ui.showHints ? `<div class="card" style="margin-top:8px;background:var(--teal-soft);border:0">
+      ${ui.showHints ? `<div class="card hints" style="margin-top:8px">
         ${ui.hints.map((h) => `<div style="margin-bottom:10px">
-          <div style="font-weight:700;font-size:14px">${esc(h.title)}</div>
+          <div style="font-weight:600;font-size:14px">${esc(h.title)}</div>
           <div class="small">${esc(h.hint.text)}</div>
-          <a class="small" href="${esc(h.hint.url)}" style="color:var(--indigo)">${esc(h.hint.source)}</a>
+          <a class="small" href="${esc(h.hint.url)}">${esc(h.hint.source)}</a>
         </div>`).join("")}
       </div>` : ""}` : ""}
 
     <div class="stack" style="margin-top:14px">
       ${list.map((p) => `
-        <div class="prow">
+        <div class="prow plain">
           <span class="time">${p.time}</span>
           <span></span>
           <button class="body-btn pt" data-editdraft="${p.id}">${esc(p.title)}<small>${p.minutes} мин</small></button>
@@ -732,7 +814,7 @@ function viewSetupSchedule() {
         </div>`).join("")}
     </div>
 
-    <button class="btn dashed wide sm" style="margin-top:10px" id="add-draft">+ Добавить пункт</button>
+    <button class="btn ghost wide sm" style="margin-top:10px" id="add-draft">+ Добавить пункт</button>
     <button class="btn wide" style="margin-top:18px" id="finish-setup" ${list.length ? "" : "disabled"}>Начать день</button>
   `;
 }
@@ -758,11 +840,10 @@ function viewToday() {
   const term = wordOfTheDay();
   const showWord = state.wordSeen !== todayKey();
 
-  return `
-    ${showWord ? `<div class="word">
+  const wordCard = showWord ? `<div class="word">
       <div class="row" style="align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
-          <p class="kicker" style="color:var(--teal)">Слово дня</p>
+          <p class="kicker">Слово дня</p>
           <p class="word-w">${esc(term.word)}</p>
           <p class="small" style="margin-top:2px">${esc(term.meaning)}</p>
         </div>
@@ -770,8 +851,11 @@ function viewToday() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
-    </div>` : ""}
+    </div>` : "";
 
+  // The timer comes first and the schedule right after it: those two are the screen. What is
+  // set once and then left alone is folded into one line between them.
+  return `
     <div class="dial${t.mode === "rest" ? " rest" : ""}">
       <svg viewBox="0 0 200 200" aria-hidden="true">
         <circle class="ring-track" cx="100" cy="100" r="86"></circle>
@@ -807,11 +891,24 @@ function viewToday() {
       </div>
     </div>
 
-    ${idle && next ? `<button class="btn ghost wide sm" style="margin-top:14px" id="t-free">Свободный фокус ${state.settings.freeMinutes} мин</button>` : ""}
-    ${!idle ? `<button class="btn ghost wide sm" style="margin-top:14px" id="t-voice">${state.settings.speak ? "🔊 Объявлять следующее за 15 сек" : "🔇 Объявления выключены"}</button>` : ""}
+    <div class="settings">
+      <button class="settings-head" id="ts-toggle" aria-expanded="${ui.settingsOpen}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+        <span class="tx"><b>Настройка таймера</b><small id="ts-summary">${esc(settingsSummary())}</small></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="${ui.settingsOpen ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"}"/></svg>
+      </button>
+      ${ui.settingsOpen ? `<div class="settings-body">
+        <div class="row" style="align-items:flex-end">
+          <label class="field" style="flex:1">Свободный фокус, мин<input type="number" inputmode="numeric" id="s-free" value="${state.settings.freeMinutes}" min="1" max="180"></label>
+          <label class="field" style="flex:1">Отдых, мин<input type="number" inputmode="numeric" id="s-rest" value="${state.settings.restMinutes}" min="1" max="60"></label>
+        </div>
+        <button class="btn ghost wide sm" id="t-voice">${state.settings.speak ? "🔊 Объявлять следующее за 15 сек" : "🔇 Объявления выключены"}</button>
+        ${idle && next ? `<button class="btn ghost wide sm" id="t-free">Запустить свободный фокус</button>` : ""}
+      </div>` : ""}
+    </div>
 
     <div class="day-head">
-      <p class="sec-title">Сегодня</p>
+      <p class="sec-title">План на сегодня</p>
       <span class="small muted mono">${done.length}/${plans.length} · ${dur(doneMin)} из ${dur(totalMin)}</span>
     </div>
     <div class="progress"><i style="width:${plans.length ? (done.length / plans.length) * 100 : 0}%"></i></div>
@@ -821,9 +918,16 @@ function viewToday() {
         <p class="small" style="margin-top:4px">Добавьте первый пункт — он появится здесь и запустится в таймере.</p>
       </div>` : `<div class="stack">${plans.map((p) => renderPlanRow(p, nowM)).join("")}</div>`}
 
-    <button class="btn dashed wide sm" style="margin-top:12px" id="add-plan">+ Добавить занятие</button>
+    <button class="btn ghost wide sm" style="margin-top:12px" id="add-plan">+ Добавить занятие</button>
     ${plans.length >= MAX_PLANS ? `<p class="small muted" style="margin-top:8px">Достигнут предел — ${MAX_PLANS} пунктов на день.</p>` : ""}
+
+    ${wordCard}
   `;
+}
+
+/** What the folded settings line says, so it rarely needs opening. */
+function settingsSummary() {
+  return "Свободный фокус " + state.settings.freeMinutes + " мин · отдых " + state.settings.restMinutes + " мин";
 }
 
 function renderPlanRow(p, nowM) {
@@ -833,9 +937,7 @@ function renderPlanRow(p, nowM) {
   const late = !done && !current && minsOf(p.time) + p.minutes < nowM;
   return `
     <div class="prow${current ? " current" : ""}${done ? " done" : ""}">
-      <button class="tick" data-tick="${p.id}" aria-pressed="${done}" title="${done ? "Снять отметку" : "Отметить сделанным"}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-      </button>
+      <button class="tick" data-tick="${p.id}" aria-pressed="${done}" title="${done ? "Снять отметку" : "Отметить сделанным"}"><i>${CHECK_SVG}</i></button>
       <span class="time">${p.time}</span>
       <button class="body-btn pt" data-select="${p.id}" title="Загрузить в таймер">
         ${esc(p.title)}${isNext ? ` <span class="tag">дальше</span>` : ""}
@@ -852,9 +954,9 @@ function viewRituals() {
   const done = new Set(state.rituals.done[key] || []);
   const total = RITUAL_LIBRARY.length, d = RITUAL_LIBRARY.filter((t) => done.has(t.id)).length;
   return `
-    <div class="card" style="background:var(--indigo-soft);border:0">
-      <p style="font-family:'Golos Text',sans-serif;font-weight:700;font-size:15px;color:var(--indigo-on-soft)">Сегодня ${d} из ${total}</p>
-      <div class="bar" style="background:rgba(0,0,0,.08)"><i style="width:${total ? (d / total) * 100 : 0}%"></i></div>
+    <div class="card grey">
+      <p style="font-weight:600;font-size:15px">Сегодня ${d} из ${total}</p>
+      <div class="bar" style="margin-top:10px;height:8px;border-radius:4px"><i style="width:${total ? (d / total) * 100 : 0}%"></i></div>
     </div>
     ${RITUAL_PERIODS.map((per) => {
       const list = RITUAL_LIBRARY.filter((t) => t.period === per.id);
@@ -866,9 +968,7 @@ function viewRituals() {
         </div>
         <div class="stack" style="margin-top:8px">
           ${list.map((t) => `<div class="rit${done.has(t.id) ? " done" : ""}">
-            <button class="tick" data-rtick="${t.id}" aria-pressed="${done.has(t.id)}" title="Отметить">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-            </button>
+            <button class="tick" data-rtick="${t.id}" aria-pressed="${done.has(t.id)}" title="Отметить"><i>${CHECK_SVG}</i></button>
             <span class="rt">${t.icon} ${esc(t.title)}</span>
             <span></span>
           </div>`).join("")}
@@ -932,14 +1032,6 @@ function viewStats() {
         <div class="bar"><i style="width:${Math.max(3, (sec / largest) * 100)}%"></i></div>
       </div>`).join("")}
     </div>` : `<div class="card empty" style="margin-top:14px">Пока нет пройденных блоков. Запустите пункт из расписания — время появится здесь.</div>`}
-
-    <div class="card" style="margin-top:14px">
-      <p class="sec-title">Таймер</p>
-      <div class="row" style="margin-top:8px">
-        <label class="field" style="flex:1">Свободный фокус, мин<input type="number" id="s-free" value="${state.settings.freeMinutes}" min="1" max="180"></label>
-        <label class="field" style="flex:1">Отдых, мин<input type="number" id="s-rest" value="${state.settings.restMinutes}" min="1" max="60"></label>
-      </div>
-    </div>
   `;
 }
 
@@ -960,8 +1052,8 @@ function viewSheet() {
       </div>
       <label class="field">Комментарий<input type="text" id="sh-comment" value="${esc(s.comment || "")}" placeholder="Необязательно"></label>
       <div class="row" style="justify-content:flex-end">
-        ${s.id && !s.draft ? `<button class="btn ghost sm" data-sheet-del>Удалить</button>` : ""}
-        <button class="btn ghost sm" data-sheet-cancel>Отмена</button>
+        ${s.id && !s.draft ? `<button class="btn text danger sm" data-sheet-del>Удалить</button>` : ""}
+        <button class="btn text sm" data-sheet-cancel>Отмена</button>
         <button class="btn sm" data-sheet-ok>Сохранить</button>
       </div>
     </div></div>`;
@@ -992,6 +1084,9 @@ function render() {
   writeTimer();
   syncWakeLock();
   tabs.hidden = !showTabs;
+  // During setup the screen introduces the app itself, so the title bar would only repeat it.
+  const bar = $(".topbar");
+  if (bar) bar.hidden = !showTabs;
   Array.prototype.forEach.call(tabs.querySelectorAll("button"), (b) => {
     b.setAttribute("aria-current", String(showTabs && b.dataset.tab === ui.tab));
   });
@@ -1054,6 +1149,9 @@ document.addEventListener("click", (ev) => {
     $("#sh-title").value = lib.title;
     $("#sh-time").value = lib.time;
     $("#sh-min").value = lib.minutes;
+    // Marked in place: a re-render would wipe whatever is already typed into the sheet.
+    document.querySelectorAll(".chip.on").forEach((c) => c.classList.remove("on"));
+    el.classList.add("on");
     return;
   }
 
@@ -1103,6 +1201,7 @@ document.addEventListener("click", (ev) => {
     case "t-skip": timerComplete(); return;
     case "t-free": selectFree(); ui.timer.running = true; ui.timer.startedAt = Date.now(); render(); return;
     case "word-hide": state.wordSeen = todayKey(); save(); render(); return;
+    case "ts-toggle": ui.settingsOpen = !ui.settingsOpen; render(); return;
     case "t-voice":
       state.settings.speak = !state.settings.speak;
       if (state.settings.speak) speak("Объявления включены");
@@ -1167,12 +1266,18 @@ document.addEventListener("input", (ev) => {
     case "f-height": state.profile.height = v; save(); break;
     case "s-free":
       state.settings.freeMinutes = Math.max(1, parseInt(v, 10) || 25);
-      save(); break;
+      save(); syncSettingsSummary(); break;
     case "s-rest":
       state.settings.restMinutes = Math.max(1, parseInt(v, 10) || 5);
-      save(); break;
+      save(); syncSettingsSummary(); break;
   }
 });
+
+/** Rewrites the folded line in place, so the field being typed into keeps its focus. */
+function syncSettingsSummary() {
+  const line = $("#ts-summary");
+  if (line) line.textContent = settingsSummary();
+}
 
 document.addEventListener("change", (ev) => {
   if (ev.target.id === "f-prof") {

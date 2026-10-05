@@ -3,7 +3,7 @@
  * next launch rather than the one after; everything else is served from cache and refreshed in
  * the background. Offline, the cached copy of everything is used.
  */
-const CACHE = 'epv-v2';
+const CACHE = 'epv-v3';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
