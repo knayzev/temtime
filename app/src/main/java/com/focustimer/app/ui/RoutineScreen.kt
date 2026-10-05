@@ -1,6 +1,7 @@
 package com.focustimer.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -232,7 +233,7 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 val done = tasks.count { completedIds.contains(it.id) }
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 20.dp)
@@ -241,7 +242,7 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         Text(
                             "Выполнено $done из ${tasks.size}",
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         LinearProgressIndicator(
                             progress = (if (tasks.isEmpty()) 0f else done.toFloat() / tasks.size).coerceIn(0f, 1f),
@@ -250,8 +251,8 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                                 .padding(top = 10.dp)
                                 .height(8.dp)
                                 .clip(RoundedCornerShape(4.dp)),
-                            color = MaterialTheme.colorScheme.secondary,
-                            trackColor = MaterialTheme.colorScheme.surface
+                            color = MaterialTheme.colorScheme.tertiary,
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                         )
                     }
                 }
@@ -259,8 +260,7 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         }
 
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            // One section per ritual period. The colour index stays global so the alternating
-            // rhythm doesn't restart in every section.
+            // One section per ritual period.
             RITUAL_PERIODS.forEach { period ->
                 val periodTasks = tasks.filter { it.period == period }
                 if (periodTasks.isEmpty()) return@forEach
@@ -307,7 +307,6 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 periodTasks.forEach { task ->
                     RoutineRow(
                         task = task,
-                        index = tasks.indexOfFirst { it.id == task.id },
                         isDone = completedIds.contains(task.id),
                         streak = prefs.routineStreak(task.id, todayKey, previousDates),
                         interactive = isToday,
@@ -517,7 +516,6 @@ private fun WeekStrip(
 @Composable
 private fun RoutineRow(
     task: RoutineTask,
-    index: Int,
     isDone: Boolean,
     streak: Int,
     interactive: Boolean,
@@ -530,18 +528,30 @@ private fun RoutineRow(
     onStart: (() -> Unit)? = null,
     onPauseToggle: (() -> Unit)? = null
 ) {
-    val containerColor = when (index % 3) {
-        0 -> MaterialTheme.colorScheme.primaryContainer
-        1 -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.tertiaryContainer
+    // The same card as an entry of the day plan: white while it waits, blue while its timer
+    // runs, grey once done. One neutral circle sits behind the icon in every row.
+    val rowShape = RoundedCornerShape(16.dp)
+    val rowColor = when {
+        isRunning -> MaterialTheme.colorScheme.tertiaryContainer
+        isDone -> MaterialTheme.colorScheme.surfaceContainer
+        else -> MaterialTheme.colorScheme.surface
     }
+    val rowOutline = when {
+        isRunning -> MaterialTheme.colorScheme.tertiary
+        isDone -> Color.Transparent
+        else -> MaterialTheme.colorScheme.outlineVariant
+    }
+    val iconBackdrop =
+        if (isRunning || isDone) MaterialTheme.colorScheme.surface
+        else MaterialTheme.colorScheme.surfaceContainer
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .padding(vertical = 4.dp)
+            .clip(rowShape)
+            .background(rowColor)
+            .border(1.dp, rowOutline, rowShape)
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -551,7 +561,7 @@ private fun RoutineRow(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(shape = CircleShape, color = containerColor, modifier = Modifier.size(44.dp)) {
+        Surface(shape = CircleShape, color = iconBackdrop, modifier = Modifier.size(44.dp)) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Text(task.icon, fontSize = 20.sp)
             }
@@ -585,7 +595,7 @@ private fun RoutineRow(
                         if (streak > 0) " · $timing" else timing,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isRunning || startsInSeconds > 0) {
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.tertiary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
@@ -603,7 +613,7 @@ private fun RoutineRow(
                 color = if (isRunning) {
                     MaterialTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+                    MaterialTheme.colorScheme.surfaceContainerHigh
                 },
                 modifier = Modifier
                     .size(32.dp)

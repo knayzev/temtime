@@ -1,5 +1,6 @@
 package com.focustimer.app.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -191,7 +192,8 @@ private fun StatsCard(
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -230,7 +232,9 @@ private fun CategoryBar(category: String, seconds: Int, largestSeconds: Int) {
                 .fillMaxWidth()
                 .padding(top = 4.dp)
                 .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .clip(RoundedCornerShape(3.dp)),
+            color = MaterialTheme.colorScheme.tertiary,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
         )
     }
 }
@@ -269,6 +273,10 @@ private fun AchievementRow(achievement: Achievement) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp)
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = MaterialTheme.colorScheme.tertiary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
         }
     }

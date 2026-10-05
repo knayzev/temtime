@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** A modern connected-circle progress stepper for the post-registration setup flow. */
+/** A connected-circle progress stepper for the setup flow. */
 @Composable
 fun StepperHeader(currentStep: Int, labels: List<String>, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {

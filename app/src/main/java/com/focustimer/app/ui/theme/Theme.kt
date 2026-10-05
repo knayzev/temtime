@@ -2,7 +2,9 @@ package com.focustimer.app.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -13,58 +15,81 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// A deliberate indigo/coral/teal identity instead of the Material baseline purple.
-val WorkColor = Color(0xFF5B4FE9)
-val RestColor = Color(0xFF00A896)
-
+// A monochrome identity. Black carries actions and selection, greys carry surfaces, and one soft
+// blue is kept for progress and for whatever is live — the entry in the timer, the rest phase.
+// The phase colours are therefore roles of the scheme (primary for work, tertiary for rest), not
+// fixed values: a fixed black ring would vanish on the dark theme.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF5B4FE9),
+    primary = Color(0xFF111114),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFE4E0FF),
-    onPrimaryContainer = Color(0xFF180568),
-    secondary = Color(0xFFFF7A59),
+    primaryContainer = Color(0xFFE9EBF0),
+    onPrimaryContainer = Color(0xFF111114),
+    secondary = Color(0xFF5F6470),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFDBD1),
-    onSecondaryContainer = Color(0xFF3A0D00),
-    tertiary = Color(0xFF00A896),
+    secondaryContainer = Color(0xFFECEEF2),
+    onSecondaryContainer = Color(0xFF1D1F24),
+    tertiary = Color(0xFF3B6FD8),
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFF9EF2E5),
-    onTertiaryContainer = Color(0xFF00201C),
-    background = Color(0xFFFBF8FF),
-    onBackground = Color(0xFF1B1B23),
-    surface = Color(0xFFFBF8FF),
-    onSurface = Color(0xFF1B1B23),
-    surfaceVariant = Color(0xFFE5E0EC),
-    onSurfaceVariant = Color(0xFF47454F),
-    error = Color(0xFFBA1A1A),
+    tertiaryContainer = Color(0xFFE6EEFC),
+    onTertiaryContainer = Color(0xFF0F2A5C),
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF111114),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF111114),
+    surfaceVariant = Color(0xFFECEDF0),
+    onSurfaceVariant = Color(0xFF5C6069),
+    // Elevated surfaces are tinted with this colour; with a black accent the default would turn
+    // bars and dialogs a muddy grey, so the tint is the surface itself.
+    surfaceTint = Color(0xFFFFFFFF),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF8F9FA),
+    surfaceContainer = Color(0xFFF4F5F7),
+    surfaceContainerHigh = Color(0xFFEDEEF1),
+    surfaceContainerHighest = Color(0xFFE4E6EA),
+    error = Color(0xFFC62828),
     onError = Color(0xFFFFFFFF),
-    outline = Color(0xFF79747E)
+    errorContainer = Color(0xFFFCE4E4),
+    onErrorContainer = Color(0xFF5A0F0F),
+    outline = Color(0xFF9498A1),
+    outlineVariant = Color(0xFFE1E3E8),
+    scrim = Color(0xFF000000)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFC3BFFF),
-    onPrimary = Color(0xFF2A1B8F),
-    primaryContainer = Color(0xFF4030B0),
-    onPrimaryContainer = Color(0xFFE4E0FF),
-    secondary = Color(0xFFFFB4A0),
-    onSecondary = Color(0xFF5F1600),
-    secondaryContainer = Color(0xFF7D2A0F),
-    onSecondaryContainer = Color(0xFFFFDBD1),
-    tertiary = Color(0xFF82D5C7),
-    onTertiary = Color(0xFF00382F),
-    tertiaryContainer = Color(0xFF005046),
-    onTertiaryContainer = Color(0xFF9EF2E5),
-    background = Color(0xFF131318),
-    onBackground = Color(0xFFE5E1E9),
-    surface = Color(0xFF131318),
-    onSurface = Color(0xFFE5E1E9),
-    surfaceVariant = Color(0xFF47454F),
-    onSurfaceVariant = Color(0xFFC9C5D0),
+    primary = Color(0xFFF2F3F5),
+    onPrimary = Color(0xFF111114),
+    primaryContainer = Color(0xFF2B2D33),
+    onPrimaryContainer = Color(0xFFF2F3F5),
+    secondary = Color(0xFFB9BDC7),
+    onSecondary = Color(0xFF1D1F24),
+    secondaryContainer = Color(0xFF2B2D33),
+    onSecondaryContainer = Color(0xFFE6E8EC),
+    tertiary = Color(0xFF8FB2F5),
+    onTertiary = Color(0xFF0F2A5C),
+    tertiaryContainer = Color(0xFF1F3563),
+    onTertiaryContainer = Color(0xFFDCE7FD),
+    background = Color(0xFF0F1012),
+    onBackground = Color(0xFFECEDEF),
+    surface = Color(0xFF0F1012),
+    onSurface = Color(0xFFECEDEF),
+    surfaceVariant = Color(0xFF2B2D33),
+    onSurfaceVariant = Color(0xFFA9ADB6),
+    surfaceTint = Color(0xFF0F1012),
+    surfaceContainerLowest = Color(0xFF0B0C0D),
+    surfaceContainerLow = Color(0xFF141517),
+    surfaceContainer = Color(0xFF17181B),
+    surfaceContainerHigh = Color(0xFF1F2024),
+    surfaceContainerHighest = Color(0xFF2A2C31),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
-    outline = Color(0xFF928F99)
+    errorContainer = Color(0xFF5A0F0F),
+    onErrorContainer = Color(0xFFFCE4E4),
+    outline = Color(0xFF6B6F78),
+    outlineVariant = Color(0xFF2F3238),
+    scrim = Color(0xFF000000)
 )
 
 /**
@@ -89,6 +114,18 @@ private val AppTypography = Typography(
 )
 
 /**
+ * Softer corners than the Material defaults. The smallest step is what text fields and menus take
+ * their shape from, so raising it rounds every field in the app at once.
+ */
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp)
+)
+
+/**
  * [dynamicColor] lets Android 12+ recolour the app from the wallpaper. It is off by default so
  * the brand palette stays the norm, and the caller decides whether the user opted in.
  */
@@ -110,6 +147,7 @@ fun FocusTimerTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
+        shapes = AppShapes,
         content = content
     )
 }

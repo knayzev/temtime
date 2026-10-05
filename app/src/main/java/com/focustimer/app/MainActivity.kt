@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.focustimer.app.ui.AuthScreen
 import com.focustimer.app.ui.HistoryScreen
 import com.focustimer.app.ui.LifestyleQuestionsScreen
 import com.focustimer.app.ui.OnboardingScreen
@@ -75,9 +75,7 @@ import com.focustimer.app.ui.SettingsScreen
 import com.focustimer.app.ui.StatsScreen
 import com.focustimer.app.ui.TimerScreen
 import com.focustimer.app.ui.theme.FocusTimerTheme
-import com.focustimer.app.ui.theme.RestColor
 import com.focustimer.app.ui.theme.ThemeState
-import com.focustimer.app.ui.theme.WorkColor
 
 class MainActivity : ComponentActivity() {
     private val timerViewModel: TimerViewModel by viewModels()
@@ -96,7 +94,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class RootScreen { AUTH, PROFILE_SETUP, SCHEDULE_SETUP, MAIN }
+private enum class RootScreen { PROFILE_SETUP, SCHEDULE_SETUP, MAIN }
 
 private enum class OverlayScreen { ROUTINE, LIFESTYLE, DETAILS }
 
@@ -116,34 +114,18 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 
+    // There is no account to sign in to: the app opens on the setup once and on the day itself
+    // ever after. Name and e-mail are optional and live in the profile.
     var screen by remember {
-        mutableStateOf(
-            when {
-                !prefs.isRegistered || !prefs.isLoggedIn -> RootScreen.AUTH
-                !prefs.isOnboarded -> RootScreen.PROFILE_SETUP
-                else -> RootScreen.MAIN
-            }
-        )
+        mutableStateOf(if (prefs.isOnboarded) RootScreen.MAIN else RootScreen.PROFILE_SETUP)
     }
 
     when (screen) {
-        RootScreen.MAIN -> AppRoot(
-            timerViewModel = timerViewModel,
-            onLogout = {
-                prefs.isLoggedIn = false
-                screen = RootScreen.AUTH
-            }
-        )
+        RootScreen.MAIN -> AppRoot(timerViewModel)
         // The pre-MAIN flow has no Scaffold of its own, so it keeps clear of the system bars
         // itself now that the activity draws edge to edge.
         else -> Box(modifier = Modifier.safeDrawingPadding()) {
             when (screen) {
-                RootScreen.AUTH -> AuthScreen(
-                    startInLoginMode = prefs.isRegistered,
-                    onAuthenticated = {
-                        screen = if (prefs.isOnboarded) RootScreen.MAIN else RootScreen.PROFILE_SETUP
-                    }
-                )
                 RootScreen.PROFILE_SETUP -> ProfileSetupScreen(
                     onNext = { screen = RootScreen.SCHEDULE_SETUP }
                 )
@@ -158,7 +140,7 @@ fun RootNavigator(timerViewModel: TimerViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
+fun AppRoot(timerViewModel: TimerViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = NAV_ITEMS.map { it.label }
 
@@ -225,20 +207,28 @@ fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
             )
         },
         bottomBar = {
-            NavigationBar {
-                NAV_ITEMS.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = selectedTab == index && overlayScreen == null,
-                        onClick = { selectedTab = index; overlayScreen = null },
-                        icon = {
-                            Icon(
-                                if (selectedTab == index && overlayScreen == null) item.selectedIcon
-                                else item.icon,
-                                contentDescription = item.label
-                            )
-                        },
-                        label = { Text(item.label) }
-                    )
+            // A white bar under a hairline rather than a tinted slab: with a black accent the
+            // default tonal surface reads as a grey block at the bottom of every screen.
+            Column {
+                Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    NAV_ITEMS.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            selected = selectedTab == index && overlayScreen == null,
+                            onClick = { selectedTab = index; overlayScreen = null },
+                            icon = {
+                                Icon(
+                                    if (selectedTab == index && overlayScreen == null) item.selectedIcon
+                                    else item.icon,
+                                    contentDescription = item.label
+                                )
+                            },
+                            label = { Text(item.label) }
+                        )
+                    }
                 }
             }
         }
@@ -266,7 +256,7 @@ fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
                     0 -> TimerScreen(timerViewModel)
                     1 -> HistoryScreen()
                     2 -> StatsScreen()
-                    3 -> SettingsScreen(onLogout = onLogout)
+                    3 -> SettingsScreen()
                     4 -> ProfileScreen(
                         onOpenLifestyle = { overlayScreen = OverlayScreen.LIFESTYLE },
                         onOpenDetails = { overlayScreen = OverlayScreen.DETAILS }
@@ -279,14 +269,15 @@ fun AppRoot(timerViewModel: TimerViewModel, onLogout: () -> Unit) {
 
 @Composable
 private fun MiniTimerBar(timerState: TimerUiState, onClick: () -> Unit) {
-    val phaseColor = if (timerState.phase == TimerPhase.WORK) WorkColor else RestColor
+    val phaseColor = if (timerState.phase == TimerPhase.WORK) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.tertiary
     val phaseLabel = if (timerState.phase == TimerPhase.WORK) "Работа" else "Отдых"
     val minutes = timerState.secondsLeft / 60
     val seconds = timerState.secondsLeft % 60
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(phaseColor.copy(alpha = 0.15f))
+            .background(phaseColor.copy(alpha = 0.1f))
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

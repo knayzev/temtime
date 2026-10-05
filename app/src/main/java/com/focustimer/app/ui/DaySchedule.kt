@@ -1,6 +1,8 @@
 package com.focustimer.app.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -82,7 +85,7 @@ fun DaySchedule(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
-            Text("Сегодня", style = MaterialTheme.typography.titleMedium)
+            Text("План на сегодня", style = MaterialTheme.typography.titleMedium)
             Text(
                 "${doneIds.count { id -> items.any { it.id == id } }}/${items.size} · " +
                     "${formatSpan(doneMinutes)} из ${formatSpan(totalMinutes)}",
@@ -99,7 +102,7 @@ fun DaySchedule(
                     .padding(top = 6.dp, bottom = 10.dp)
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
                 Box(
                     modifier = Modifier
@@ -113,7 +116,7 @@ fun DaySchedule(
         if (items.isEmpty()) {
             Surface(
                 shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
@@ -167,52 +170,81 @@ private fun PlanItemRow(
     onToggleDone: () -> Unit,
     onEdit: () -> Unit
 ) {
+    // A bordered card: white while the entry waits, tinted blue while it is in the timer, greyed
+    // once it is done.
     val background = when {
-        isRunning -> MaterialTheme.colorScheme.primaryContainer
-        isDone -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+        isRunning -> MaterialTheme.colorScheme.tertiaryContainer
+        isDone -> MaterialTheme.colorScheme.surfaceContainer
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val cardBorder = when {
+        isRunning -> BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary)
+        isDone -> null
+        else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     }
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = background,
+        border = cardBorder,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp)
+            .padding(vertical = 4.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
         ) {
-            // A circle rather than a checkbox: the whole row is a tap target for the timer, and
-            // this one tap must not be mistaken for it.
+            // A circle rather than a checkbox: the title is the tap target for the timer, and this
+            // one tap must not be mistaken for it. The ring is what keeps an empty circle visible
+            // on a white card, and the area around it is tappable so the target is not 24 dp.
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (isDone) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.surface
-                    )
                     .clickable(onClick = onToggleDone),
                 contentAlignment = Alignment.Center
             ) {
-                if (isDone) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = "Снять отметку",
-                        tint = MaterialTheme.colorScheme.onTertiary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (isDone) {
+                                Modifier.background(MaterialTheme.colorScheme.primary)
+                            } else {
+                                Modifier
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(
+                                        2.dp,
+                                        if (isRunning) MaterialTheme.colorScheme.tertiary
+                                        else MaterialTheme.colorScheme.outline,
+                                        CircleShape
+                                    )
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isDone) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Снять отметку",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
 
             Text(
                 item.time,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.primary,
+                color = when {
+                    isDone -> MaterialTheme.colorScheme.onSurfaceVariant
+                    isRunning -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
                 modifier = Modifier
-                    .padding(start = 10.dp)
+                    .padding(start = 4.dp)
                     .width(46.dp)
             )
 
@@ -308,19 +340,27 @@ fun PlanItemDialog(
                         QUICK_FILL_TITLES.forEach { name ->
                             val lib = PLAN_TASK_LIBRARY.firstOrNull { it.title == name }
                             if (lib != null) {
+                                // The chip that filled the fields stays black, so it is clear
+                                // where the values below came from.
+                                val picked = title == lib.title
                                 Surface(
                                     shape = RoundedCornerShape(999.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.clickable {
-                                        title = lib.title
-                                        time = lib.timeOfDay
-                                        minutes = lib.durationMinutes.toString()
-                                    }
+                                    color = if (picked) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .clickable {
+                                            title = lib.title
+                                            time = lib.timeOfDay
+                                            minutes = lib.durationMinutes.toString()
+                                        }
                                 ) {
                                     Text(
                                         lib.title,
                                         style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        color = if (picked) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                                     )
                                 }
                             }
@@ -370,10 +410,10 @@ fun PlanItemDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     val clean = title.trim()
-                    if (clean.isEmpty()) return@TextButton
+                    if (clean.isEmpty()) return@Button
                     onConfirm(
                         PlanItem(
                             id = existing?.id ?: "planitem_${System.currentTimeMillis()}",
@@ -389,7 +429,9 @@ fun PlanItemDialog(
         dismissButton = {
             Row {
                 if (onDelete != null) {
-                    TextButton(onClick = onDelete) { Text("Удалить") }
+                    TextButton(onClick = onDelete) {
+                        Text("Удалить", color = MaterialTheme.colorScheme.error)
+                    }
                 }
                 TextButton(onClick = onDismiss) { Text("Отмена") }
             }

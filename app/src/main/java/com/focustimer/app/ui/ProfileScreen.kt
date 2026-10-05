@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.focustimer.app.PrefsManager
@@ -153,7 +154,7 @@ private fun ProfileFormTab() {
     ) {
         Box(
             modifier = Modifier
-                .padding(vertical = 24.dp)
+                .padding(top = 24.dp, bottom = 12.dp)
                 .size(120.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -181,6 +182,17 @@ private fun ProfileFormTab() {
                 )
             }
         }
+
+        // Nothing here is asked for at first launch any more, so the screen says it is optional.
+        Text(
+            "Заполнять необязательно. Данные хранятся только на этом устройстве.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
 
         OutlinedTextField(
             value = name,

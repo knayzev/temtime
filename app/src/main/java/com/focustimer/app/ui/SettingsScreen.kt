@@ -46,7 +46,7 @@ import com.focustimer.app.PrefsManager
 import com.focustimer.app.ui.theme.ThemeState
 
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier, onLogout: () -> Unit = {}) {
+fun SettingsScreen(modifier: Modifier = Modifier) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -65,7 +65,7 @@ fun SettingsScreen(modifier: Modifier = Modifier, onLogout: () -> Unit = {}) {
 
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
-                0 -> GeneralSettingsTab(onLogout = onLogout)
+                0 -> GeneralSettingsTab()
                 1 -> ActivitySettingsTab()
             }
         }
@@ -73,7 +73,7 @@ fun SettingsScreen(modifier: Modifier = Modifier, onLogout: () -> Unit = {}) {
 }
 
 @Composable
-private fun GeneralSettingsTab(onLogout: () -> Unit) {
+private fun GeneralSettingsTab() {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 
@@ -329,14 +329,6 @@ private fun GeneralSettingsTab(onLogout: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp)
             )
-        }
-
-        Divider(modifier = Modifier.padding(vertical = 16.dp))
-        OutlinedButton(
-            onClick = onLogout,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Выйти из аккаунта")
         }
     }
 
