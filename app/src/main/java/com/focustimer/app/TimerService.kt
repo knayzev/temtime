@@ -392,6 +392,31 @@ class TimerService : Service() {
         }
     }
 
+    /**
+     * A plain countdown of [minutes], with no rest phase after it. Everything is set in one go
+     * because setWorkMinutes alone refuses to move the clock while a phase is mid-flight.
+     */
+    fun startPlain(minutes: Int) {
+        timerJob?.cancel()
+        graceJob?.cancel()
+        graceJob = null
+        flushHistoryEntry(interrupted = true)
+        prefs.workMinutes = minutes
+        prefs.restMinutes = 0
+        announcedThisPhase = false
+        _uiState.update {
+            it.copy(
+                phase = TimerPhase.WORK,
+                workMinutes = minutes,
+                restMinutes = 0,
+                secondsLeft = minutes * 60,
+                isRunning = false,
+                escalationActive = false
+            )
+        }
+        start()
+    }
+
     fun pause() {
         timerJob?.cancel()
         _uiState.update { it.copy(isRunning = false) }
@@ -428,6 +453,32 @@ class TimerService : Service() {
         val finishedPhase = _uiState.value.phase
         val quote = if (finishedPhase == TimerPhase.WORK) MOTIVATIONAL_QUOTES.random() else null
         flushHistoryEntry(interrupted = false, quote = quote ?: "")
+
+        // Rest set to zero means a plain countdown: it ends here instead of rolling into a rest
+        // phase, so there is nothing to come back to and no escalation to arm.
+        if (finishedPhase == TimerPhase.WORK && _uiState.value.restMinutes <= 0) {
+            timerJob?.cancel()
+            graceJob?.cancel()
+            graceJob = null
+            announcedThisPhase = false
+            _uiState.update {
+                it.copy(
+                    phase = TimerPhase.WORK,
+                    secondsLeft = it.workMinutes * 60,
+                    isRunning = false,
+                    escalationActive = false,
+                    motivationQuote = quote ?: it.motivationQuote
+                )
+            }
+            notifyTimerFinished()
+            repeatAlert(times = 3)
+            if (prefs.voiceAnnounceEnabled) {
+                speak(if (prefs.voiceLanguage == "English") "Timer finished" else "Время вышло")
+            }
+            updateOngoingNotification()
+            return
+        }
+
         val nextPhase = if (finishedPhase == TimerPhase.WORK) TimerPhase.REST else TimerPhase.WORK
         val minutes = if (nextPhase == TimerPhase.WORK) _uiState.value.workMinutes else _uiState.value.restMinutes
         announcedThisPhase = false
@@ -628,6 +679,19 @@ class TimerService : Service() {
     private fun updateOngoingNotification() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIF_ID_ONGOING, buildOngoingNotification())
+    }
+
+    /** The plain-countdown counterpart of [notifyPhaseChanged]: nothing starts after this one. */
+    private fun notifyTimerFinished() {
+        val notification = NotificationCompat.Builder(this, CHANNEL_PHASE)
+            .setSmallIcon(android.R.drawable.ic_menu_recent_history)
+            .setContentTitle("Время вышло")
+            .setContentText("Таймер завершён")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(openAppPendingIntent())
+            .build()
+        getSystemService(NotificationManager::class.java).notify(NOTIF_ID_PHASE, notification)
     }
 
     private fun notifyPhaseChanged(phase: TimerPhase) {

@@ -54,6 +54,13 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         service?.start()
     }
 
+    /** A plain countdown of [minutes] with no rest phase after it. */
+    fun startPlain(minutes: Int) {
+        val context = getApplication<Application>()
+        ContextCompat.startForegroundService(context, Intent(context, TimerService::class.java))
+        service?.startPlain(minutes)
+    }
+
     fun pause() = service?.pause()
 
     fun stop() = service?.stop()

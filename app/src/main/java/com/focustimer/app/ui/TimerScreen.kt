@@ -99,6 +99,7 @@ fun TimerScreen(
     var editingItem by remember { mutableStateOf<PlanItem?>(null) }
     var addingItem by remember { mutableStateOf(false) }
     var wordHidden by remember { mutableStateOf(prefs.wordSeenDate == todayKey) }
+    var showCustomTimer by remember { mutableStateOf(false) }
     val term = remember { wordOfTheDay() }
 
     // The schedule is kept per weekday, so only what belongs to today reaches this screen.
@@ -213,6 +214,8 @@ fun TimerScreen(
             phaseLabel = when {
                 state.phase == TimerPhase.REST -> "Отдых"
                 selectedPlan != null -> selectedPlan.title
+                // Without a rest phase there is no work/rest cycle to name.
+                state.restMinutes <= 0 -> "Таймер"
                 else -> "Работа"
             },
             timeText = "%02d:%02d".format(minutes, seconds),
@@ -244,6 +247,19 @@ fun TimerScreen(
             )
         }
 
+        // One tap starts a plain countdown. It deliberately sits above the fold, next to the
+        // buttons, because it is the shortest path on this screen.
+        if (!state.isRunning) {
+            QuickTimerRow(
+                onPick = { minutes ->
+                    selectedPlanId = null
+                    viewModel.startPlain(minutes)
+                },
+                onCustom = { showCustomTimer = true },
+                modifier = Modifier.padding(top = 18.dp)
+            )
+        }
+
         if (liveSteps != null) {
             Text(
                 "Шаги сегодня: $liveSteps",
@@ -256,7 +272,8 @@ fun TimerScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         TimerSettingsCard(
-            summary = "Работа ${state.workMinutes} мин · отдых ${state.restMinutes} мин",
+            summary = "Работа ${state.workMinutes} мин · " +
+                if (state.restMinutes > 0) "отдых ${state.restMinutes} мин" else "без отдыха",
             expanded = settingsExpanded,
             onToggle = { settingsExpanded = !settingsExpanded }
         ) {
@@ -459,6 +476,17 @@ fun TimerScreen(
                 }
             }
         }
+    }
+
+    if (showCustomTimer) {
+        CustomTimerDialog(
+            onDismiss = { showCustomTimer = false },
+            onStart = { value ->
+                selectedPlanId = null
+                viewModel.startPlain(value)
+                showCustomTimer = false
+            }
+        )
     }
 
     if (addingItem) {
@@ -887,4 +915,99 @@ private fun DialAction(
             modifier = Modifier.padding(top = 6.dp)
         )
     }
+}
+
+/** Durations offered for a one-tap countdown. */
+private val QUICK_TIMER_MINUTES = listOf(5, 10, 15, 25, 45, 60)
+
+/**
+ * A plain countdown: pick a length and it starts. No rest phase, no category, no plan entry —
+ * the shortest thing this screen can do.
+ */
+@Composable
+private fun QuickTimerRow(
+    onPick: (Int) -> Unit,
+    onCustom: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            "Быстрый таймер",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            QUICK_TIMER_MINUTES.forEach { value ->
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .clickable { onPick(value) }
+                ) {
+                    Text(
+                        "$value мин",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                    )
+                }
+            }
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .clickable(onClick = onCustom)
+            ) {
+                Text(
+                    "Своё время",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomTimerDialog(onDismiss: () -> Unit, onStart: (Int) -> Unit) {
+    var minutes by remember { mutableStateOf("") }
+    val parsed = minutes.toIntOrNull()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Свой таймер") },
+        text = {
+            Column {
+                Text(
+                    "Отсчёт на указанное время. Без отдыха после — просто закончится.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = minutes,
+                    onValueChange = { minutes = it.filter { ch -> ch.isDigit() }.take(3) },
+                    label = { Text("Минут") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (parsed != null && parsed > 0) onStart(parsed) },
+                enabled = parsed != null && parsed > 0
+            ) { Text("Запустить") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
+    )
 }
