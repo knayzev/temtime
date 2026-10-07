@@ -138,6 +138,19 @@ data class PlanItem(
 /** Monday-first, matching how the week is shown. */
 val ALL_WEEKDAYS: Set<Int> = setOf(1, 2, 3, 4, 5, 6, 7)
 
+/**
+ * A one-off thing to do on a given date. Unlike [PlanItem] it has no time, no length and does not
+ * repeat — it belongs to that date only.
+ */
+data class DayTask(
+    val id: String,
+    val title: String,
+    val done: Boolean = false
+)
+
+/** How many one-off tasks a single day may hold. */
+const val MAX_DAY_TASKS = 30
+
 /** How many entries one day may hold. */
 const val MAX_PLAN_ITEMS = 20
 
@@ -656,6 +669,48 @@ class PrefsManager(context: Context) {
         planCompletionsRaw = root
     }
 
+    private var dayTasksRaw: JSONObject
+        get() {
+            val raw = prefs.getString(KEY_DAY_TASKS, null) ?: return JSONObject()
+            return try { JSONObject(raw) } catch (_: Exception) { JSONObject() }
+        }
+        set(value) = prefs.edit().putString(KEY_DAY_TASKS, value.toString()).apply()
+
+    fun dayTasks(date: String): List<DayTask> {
+        val arr = dayTasksRaw.optJSONArray(date) ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val o = arr.optJSONObject(i) ?: return@mapNotNull null
+            DayTask(
+                id = o.optString("id", "task_$i"),
+                title = o.optString("title", ""),
+                done = o.optBoolean("done", false)
+            )
+        }.filter { it.title.isNotBlank() }
+    }
+
+    fun setDayTasks(date: String, tasks: List<DayTask>) {
+        val root = dayTasksRaw
+        if (tasks.isEmpty()) {
+            root.remove(date)
+        } else {
+            val arr = JSONArray()
+            tasks.take(MAX_DAY_TASKS).forEach { task ->
+                arr.put(
+                    JSONObject().apply {
+                        put("id", task.id)
+                        put("title", task.title)
+                        put("done", task.done)
+                    }
+                )
+            }
+            root.put(date, arr)
+        }
+        // Old days are of no use once they are off the screen, and this map is never paged.
+        val cutoff = dateKeyDaysAgo(120)
+        root.keys().asSequence().filter { it < cutoff }.toList().forEach { root.remove(it) }
+        dayTasksRaw = root
+    }
+
     /** The day whose term of the day has already been dismissed. */
     var wordSeenDate: String
         get() = prefs.getString(KEY_WORD_SEEN, "") ?: ""
@@ -1099,6 +1154,7 @@ class PrefsManager(context: Context) {
         private const val KEY_ROUTINE_COMPLETIONS = "routine_completions"
         private const val KEY_DAY_SUMMARIES = "day_summaries"
         private const val KEY_PLAN_ITEMS = "plan_items"
+        private const val KEY_DAY_TASKS = "day_tasks"
         private const val KEY_PLAN_COMPLETIONS = "plan_completions"
         private const val KEY_PLANS_MIGRATED = "plans_migrated_v2"
         private const val KEY_WORD_SEEN = "word_seen_date"
@@ -1106,4 +1162,15 @@ class PrefsManager(context: Context) {
         private const val KEY_ACTIVE_PLAN_TEMPLATE = "active_plan_template_id"
         private const val KEY_PLAN_HISTORY = "plan_history"
     }
+}
+
+/** A date key N days back, in the same "yyyy-MM-dd" shape the day-keyed maps use. */
+private fun dateKeyDaysAgo(days: Int): String {
+    val calendar = java.util.Calendar.getInstance()
+    calendar.add(java.util.Calendar.DAY_OF_MONTH, -days)
+    return "%04d-%02d-%02d".format(
+        calendar.get(java.util.Calendar.YEAR),
+        calendar.get(java.util.Calendar.MONTH) + 1,
+        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    )
 }

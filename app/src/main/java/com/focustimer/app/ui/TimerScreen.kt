@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.focustimer.app.DayTask
 import com.focustimer.app.MAX_PLAN_ITEMS
 import com.focustimer.app.PlanItem
 import com.focustimer.app.PrefsManager
@@ -100,6 +101,7 @@ fun TimerScreen(
     var addingItem by remember { mutableStateOf(false) }
     var wordHidden by remember { mutableStateOf(prefs.wordSeenDate == todayKey) }
     var showCustomTimer by remember { mutableStateOf(false) }
+    var dayTasks by remember { mutableStateOf(prefs.dayTasks(todayKey)) }
     val term = remember { wordOfTheDay() }
 
     // The schedule is kept per weekday, so only what belongs to today reaches this screen.
@@ -430,6 +432,30 @@ fun TimerScreen(
             )
             Text("Весь график по дням", modifier = Modifier.padding(start = 6.dp))
         }
+
+        Divider(modifier = Modifier.padding(top = 20.dp, bottom = 18.dp))
+
+        DayTasks(
+            tasks = dayTasks,
+            onToggle = { task ->
+                prefs.setDayTasks(
+                    todayKey,
+                    dayTasks.map { if (it.id == task.id) it.copy(done = !it.done) else it }
+                )
+                dayTasks = prefs.dayTasks(todayKey)
+            },
+            onRemove = { task ->
+                prefs.setDayTasks(todayKey, dayTasks.filterNot { it.id == task.id })
+                dayTasks = prefs.dayTasks(todayKey)
+            },
+            onAdd = { title ->
+                prefs.setDayTasks(
+                    todayKey,
+                    dayTasks + DayTask(id = "daytask_${System.currentTimeMillis()}", title = title)
+                )
+                dayTasks = prefs.dayTasks(todayKey)
+            }
+        )
 
         // Read once and dismissed, so it sits under the schedule instead of pushing the timer down.
         if (!wordHidden) {
