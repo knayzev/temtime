@@ -74,6 +74,7 @@ import com.focustimer.app.ui.RoutineScreen
 import com.focustimer.app.ui.SettingsScreen
 import com.focustimer.app.ui.StatsScreen
 import com.focustimer.app.ui.TimerScreen
+import com.focustimer.app.ui.WeekScreen
 import com.focustimer.app.ui.theme.FocusTimerTheme
 import com.focustimer.app.ui.theme.ThemeState
 
@@ -96,7 +97,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class RootScreen { PROFILE_SETUP, SCHEDULE_SETUP, MAIN }
 
-private enum class OverlayScreen { ROUTINE, LIFESTYLE, DETAILS }
+private enum class OverlayScreen { ROUTINE, WEEK, LIFESTYLE, DETAILS }
 
 /** One bottom-bar destination. The filled icon marks the active tab, the outlined one the rest. */
 private data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
@@ -192,6 +193,7 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                     Text(
                         when (overlayScreen) {
                             OverlayScreen.ROUTINE -> "Ритуалы"
+                            OverlayScreen.WEEK -> "Неделя"
                             OverlayScreen.LIFESTYLE -> "Образ жизни"
                             OverlayScreen.DETAILS -> "Подробная анкета"
                             null -> tabs[selectedTab]
@@ -244,6 +246,7 @@ fun AppRoot(timerViewModel: TimerViewModel) {
             }
             when (overlayScreen) {
                 OverlayScreen.ROUTINE -> RoutineScreen(onBack = { overlayScreen = null })
+                OverlayScreen.WEEK -> WeekScreen(onBack = { overlayScreen = null })
                 OverlayScreen.LIFESTYLE -> LifestyleQuestionsScreen(
                     onComplete = { overlayScreen = null }
                 )
@@ -253,7 +256,10 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                     onComplete = { overlayScreen = null }
                 )
                 null -> when (selectedTab) {
-                    0 -> TimerScreen(timerViewModel)
+                    0 -> TimerScreen(
+                        viewModel = timerViewModel,
+                        onOpenWeek = { overlayScreen = OverlayScreen.WEEK }
+                    )
                     1 -> HistoryScreen()
                     2 -> StatsScreen()
                     3 -> SettingsScreen()

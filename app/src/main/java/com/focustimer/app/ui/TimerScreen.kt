@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
@@ -77,7 +78,11 @@ import com.focustimer.app.TimerPreset
 import com.focustimer.app.TimerViewModel
 
 @Composable
-fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
+fun TimerScreen(
+    viewModel: TimerViewModel,
+    onOpenWeek: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val state by viewModel.uiState.collectAsState()
     val minutes = state.secondsLeft / 60
     val seconds = state.secondsLeft % 60
@@ -87,6 +92,7 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
     val liveSteps = rememberLiveStepCount(prefs.stepsEnabled)
 
     val todayKey = remember { dayStamp() }
+    val weekday = remember { todayWeekday() }
     var planItems by remember { mutableStateOf(prefs.planItems) }
     var doneIds by remember { mutableStateOf(prefs.completedPlanIds(todayKey)) }
     var selectedPlanId by remember { mutableStateOf<String?>(null) }
@@ -95,7 +101,9 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
     var wordHidden by remember { mutableStateOf(prefs.wordSeenDate == todayKey) }
     val term = remember { wordOfTheDay() }
 
-    val selectedPlan = planItems.firstOrNull { it.id == selectedPlanId }
+    // The schedule is kept per weekday, so only what belongs to today reaches this screen.
+    val todayItems = planItems.filter { it.onDay(weekday) }
+    val selectedPlan = todayItems.firstOrNull { it.id == selectedPlanId }
 
     /** Loads an entry into the timer without starting it: the user decides when to begin. */
     fun selectPlan(item: PlanItem) {
@@ -112,7 +120,7 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
             selectedPlanId?.let { finishedId ->
                 prefs.setPlanItemDone(todayKey, finishedId, true)
                 doneIds = prefs.completedPlanIds(todayKey)
-                val next = planItems.firstOrNull { !doneIds.contains(it.id) }
+                val next = todayItems.firstOrNull { !doneIds.contains(it.id) }
                 selectedPlanId = next?.id
                 if (next != null) {
                     viewModel.setWorkMinutes(next.minutes)
@@ -368,7 +376,7 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(24.dp))
 
         DaySchedule(
-            items = planItems,
+            items = todayItems,
             doneIds = doneIds,
             runningId = if (state.phase == TimerPhase.WORK) selectedPlanId else null,
             nowMinutes = nowMinutesOfDay(),
@@ -390,6 +398,20 @@ fun TimerScreen(viewModel: TimerViewModel, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
             )
+        }
+
+        TextButton(
+            onClick = onOpenWeek,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+        ) {
+            Icon(
+                Icons.Default.CalendarMonth,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Text("Весь график по дням", modifier = Modifier.padding(start = 6.dp))
         }
 
         // Read once and dismissed, so it sits under the schedule instead of pushing the timer down.

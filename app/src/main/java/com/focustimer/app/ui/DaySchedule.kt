@@ -45,10 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.focustimer.app.PLAN_TASK_LIBRARY
+import com.focustimer.app.ALL_WEEKDAYS
 import com.focustimer.app.PlanItem
 import java.util.Calendar
 
@@ -311,12 +313,14 @@ fun PlanItemDialog(
     defaultTime: String,
     onDismiss: () -> Unit,
     onConfirm: (PlanItem) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    defaultDays: Set<Int> = ALL_WEEKDAYS
 ) {
     var title by remember { mutableStateOf(existing?.title ?: "") }
     var time by remember { mutableStateOf(existing?.time ?: defaultTime) }
     var minutes by remember { mutableStateOf((existing?.minutes ?: 30).toString()) }
     var comment by remember { mutableStateOf(existing?.comment ?: "") }
+    var days by remember { mutableStateOf(existing?.days?.ifEmpty { ALL_WEEKDAYS } ?: defaultDays) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -407,6 +411,60 @@ fun PlanItemDialog(
                         .fillMaxWidth()
                         .padding(top = 10.dp)
                 )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "В какие дни",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(
+                        onClick = {
+                            days = if (days.size == 7) setOf(todayWeekday()) else ALL_WEEKDAYS
+                        }
+                    ) {
+                        Text(if (days.size == 7) "Только сегодня" else "Каждый день")
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    WEEKDAY_SHORT.forEachIndexed { index, short ->
+                        val day = index + 1
+                        val on = days.contains(day)
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = if (on) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(999.dp))
+                                .clickable {
+                                    // Never leave an entry with no day: the last one stays on.
+                                    val next = if (on) days - day else days + day
+                                    if (next.isNotEmpty()) days = next
+                                }
+                        ) {
+                            Text(
+                                short,
+                                style = MaterialTheme.typography.labelMedium,
+                                textAlign = TextAlign.Center,
+                                color = if (on) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -420,7 +478,8 @@ fun PlanItemDialog(
                             title = clean,
                             time = time,
                             minutes = minutes.toIntOrNull()?.coerceAtLeast(1) ?: 30,
-                            comment = comment.trim()
+                            comment = comment.trim(),
+                            days = days.ifEmpty { ALL_WEEKDAYS }
                         )
                     )
                 }
@@ -492,4 +551,18 @@ fun dayStamp(millis: Long = System.currentTimeMillis()): String {
 fun nowMinutesOfDay(): Int {
     val calendar = Calendar.getInstance()
     return calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+}
+
+/** Monday-first names, matching how the week screen lists the days. */
+val WEEKDAY_NAMES = listOf(
+    "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"
+)
+
+val WEEKDAY_SHORT = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+
+/** Today as 1 = Monday … 7 = Sunday; Calendar counts from Sunday, so it is shifted. */
+fun todayWeekday(millis: Long = System.currentTimeMillis()): Int {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = millis
+    return ((calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7) + 1
 }

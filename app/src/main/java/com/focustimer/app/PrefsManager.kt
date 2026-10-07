@@ -125,8 +125,18 @@ data class PlanItem(
     /** When it happens, as "HH:MM". */
     val time: String,
     val minutes: Int,
-    val comment: String = ""
-)
+    val comment: String = "",
+    /**
+     * The weekdays it repeats on, 1 = Monday … 7 = Sunday. An empty set is read as every day, so
+     * an entry can never end up invisible on every screen.
+     */
+    val days: Set<Int> = ALL_WEEKDAYS
+) {
+    fun onDay(weekday: Int): Boolean = days.isEmpty() || days.contains(weekday)
+}
+
+/** Monday-first, matching how the week is shown. */
+val ALL_WEEKDAYS: Set<Int> = setOf(1, 2, 3, 4, 5, 6, 7)
 
 /** How many entries one day may hold. */
 const val MAX_PLAN_ITEMS = 20
@@ -593,12 +603,16 @@ class PrefsManager(context: Context) {
                 val array = JSONArray(raw)
                 (0 until array.length()).map { i ->
                     val o = array.getJSONObject(i)
+                    val daysArr = o.optJSONArray("days")
                     PlanItem(
                         id = o.getString("id"),
                         title = o.getString("title"),
                         time = o.optString("time", "09:00"),
                         minutes = o.optInt("minutes", 30),
-                        comment = o.optString("comment", "")
+                        comment = o.optString("comment", ""),
+                        // Entries saved before the week existed applied to every day.
+                        days = if (daysArr == null) ALL_WEEKDAYS
+                        else (0 until daysArr.length()).map { daysArr.getInt(it) }.toSet()
                     )
                 }.sortedBy { it.time }
             } catch (_: Exception) {
@@ -615,6 +629,7 @@ class PrefsManager(context: Context) {
                         put("time", item.time)
                         put("minutes", item.minutes)
                         put("comment", item.comment)
+                        put("days", JSONArray(item.days.sorted()))
                     }
                 )
             }
