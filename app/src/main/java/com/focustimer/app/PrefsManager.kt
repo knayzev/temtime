@@ -151,6 +151,20 @@ data class DayTask(
 /** How many one-off tasks a single day may hold. */
 const val MAX_DAY_TASKS = 30
 
+/** One Jira issue, cut down to what the day screen shows. */
+data class JiraIssue(
+    val key: String,
+    val summary: String,
+    val status: String
+)
+
+/**
+ * Filtering by status category pulls in everything Jira calls "indeterminate" — on this board
+ * that includes SUSPENDED and announcement. The plain status is what "working on it" means, and
+ * the query is editable because that name differs per board and per language.
+ */
+const val DEFAULT_JIRA_JQL = "assignee = currentUser() AND status = \"В работе\" ORDER BY updated DESC"
+
 /** How many entries one day may hold. */
 const val MAX_PLAN_ITEMS = 20
 
@@ -711,6 +725,64 @@ class PrefsManager(context: Context) {
         dayTasksRaw = root
     }
 
+    var jiraEnabled: Boolean
+        get() = prefs.getBoolean(KEY_JIRA_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_JIRA_ENABLED, value).apply()
+
+    /** Host only, e.g. "brightcall.atlassian.net". */
+    var jiraSite: String
+        get() = prefs.getString(KEY_JIRA_SITE, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_JIRA_SITE, value.trim().removePrefix("https://").removeSuffix("/")).apply()
+
+    var jiraEmail: String
+        get() = prefs.getString(KEY_JIRA_EMAIL, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_JIRA_EMAIL, value.trim()).apply()
+
+    /** An Atlassian API token. It grants full access to that account, so it never leaves the device. */
+    var jiraToken: String
+        get() = prefs.getString(KEY_JIRA_TOKEN, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_JIRA_TOKEN, value.trim()).apply()
+
+    var jiraJql: String
+        get() = prefs.getString(KEY_JIRA_JQL, DEFAULT_JIRA_JQL) ?: DEFAULT_JIRA_JQL
+        set(value) = prefs.edit().putString(KEY_JIRA_JQL, value).apply()
+
+    var jiraSyncedAtMillis: Long
+        get() = prefs.getLong(KEY_JIRA_SYNCED_AT, 0L)
+        set(value) = prefs.edit().putLong(KEY_JIRA_SYNCED_AT, value).apply()
+
+    /** The last answer from Jira, so the list is there before the first refresh of a session. */
+    var jiraIssues: List<JiraIssue>
+        get() {
+            val raw = prefs.getString(KEY_JIRA_ISSUES, null) ?: return emptyList()
+            return try {
+                val arr = JSONArray(raw)
+                (0 until arr.length()).map { i ->
+                    val o = arr.getJSONObject(i)
+                    JiraIssue(
+                        key = o.optString("key", ""),
+                        summary = o.optString("summary", ""),
+                        status = o.optString("status", "")
+                    )
+                }.filter { it.key.isNotBlank() }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        set(value) {
+            val arr = JSONArray()
+            value.forEach { issue ->
+                arr.put(
+                    JSONObject().apply {
+                        put("key", issue.key)
+                        put("summary", issue.summary)
+                        put("status", issue.status)
+                    }
+                )
+            }
+            prefs.edit().putString(KEY_JIRA_ISSUES, arr.toString()).apply()
+        }
+
     /** The day whose term of the day has already been dismissed. */
     var wordSeenDate: String
         get() = prefs.getString(KEY_WORD_SEEN, "") ?: ""
@@ -1155,6 +1227,13 @@ class PrefsManager(context: Context) {
         private const val KEY_DAY_SUMMARIES = "day_summaries"
         private const val KEY_PLAN_ITEMS = "plan_items"
         private const val KEY_DAY_TASKS = "day_tasks"
+        private const val KEY_JIRA_ENABLED = "jira_enabled"
+        private const val KEY_JIRA_SITE = "jira_site"
+        private const val KEY_JIRA_EMAIL = "jira_email"
+        private const val KEY_JIRA_TOKEN = "jira_token"
+        private const val KEY_JIRA_JQL = "jira_jql"
+        private const val KEY_JIRA_ISSUES = "jira_issues"
+        private const val KEY_JIRA_SYNCED_AT = "jira_synced_at"
         private const val KEY_PLAN_COMPLETIONS = "plan_completions"
         private const val KEY_PLANS_MIGRATED = "plans_migrated_v2"
         private const val KEY_WORD_SEEN = "word_seen_date"

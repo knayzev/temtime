@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +43,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.focustimer.app.JiraClient
+import com.focustimer.app.JiraResult
 import com.focustimer.app.PrefsManager
 import com.focustimer.app.ui.theme.ThemeState
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
@@ -80,6 +84,14 @@ private fun GeneralSettingsTab() {
     var soundEnabled by remember { mutableStateOf(prefs.soundEnabled) }
     var vibrationEnabled by remember { mutableStateOf(prefs.vibrationEnabled) }
     var keepScreenOn by remember { mutableStateOf(prefs.keepScreenOn) }
+    var jiraEnabled by remember { mutableStateOf(prefs.jiraEnabled) }
+    var jiraSite by remember { mutableStateOf(prefs.jiraSite) }
+    var jiraEmail by remember { mutableStateOf(prefs.jiraEmail) }
+    var jiraToken by remember { mutableStateOf(prefs.jiraToken) }
+    var jiraJql by remember { mutableStateOf(prefs.jiraJql) }
+    var jiraChecking by remember { mutableStateOf(false) }
+    var jiraCheck by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     var dynamicColor by remember { mutableStateOf(prefs.dynamicColorEnabled) }
 
     var telegramEnabled by remember { mutableStateOf(prefs.telegramEnabled) }
@@ -304,6 +316,97 @@ private fun GeneralSettingsTab() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp)
+                )
+            }
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+        Text("Jira", style = MaterialTheme.typography.titleMedium)
+        SettingRow("Показывать задачи из Jira", jiraEnabled) {
+            jiraEnabled = it
+            prefs.jiraEnabled = it
+        }
+        if (jiraEnabled) {
+            Text(
+                "Нужен API-токен Atlassian: id.atlassian.net → Security → Create API token. " +
+                    "Токен даёт полный доступ к вашему Jira, хранится только на этом устройстве " +
+                    "и в резервную копию не попадает.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = jiraSite,
+                onValueChange = { jiraSite = it; prefs.jiraSite = it },
+                label = { Text("Адрес сайта") },
+                placeholder = { Text("example.atlassian.net") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = jiraEmail,
+                onValueChange = { jiraEmail = it; prefs.jiraEmail = it },
+                label = { Text("Почта аккаунта") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            )
+            OutlinedTextField(
+                value = jiraToken,
+                onValueChange = { jiraToken = it; prefs.jiraToken = it },
+                label = { Text("API-токен") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            )
+            OutlinedTextField(
+                value = jiraJql,
+                onValueChange = { jiraJql = it; prefs.jiraJql = it },
+                label = { Text("Запрос JQL") },
+                minLines = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            )
+            Text(
+                "Фильтр по категории статуса захватывает всё «в процессе», включая отложенное, " +
+                    "поэтому по умолчанию стоит точный статус.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Button(
+                onClick = {
+                    jiraChecking = true
+                    jiraCheck = null
+                    scope.launch {
+                        jiraCheck = when (
+                            val r = JiraClient.fetch(prefs.jiraSite, prefs.jiraEmail, prefs.jiraToken, prefs.jiraJql)
+                        ) {
+                            is JiraResult.Ok -> {
+                                prefs.jiraIssues = r.issues
+                                prefs.jiraSyncedAtMillis = System.currentTimeMillis()
+                                "Связь есть: задач — ${r.issues.size}"
+                            }
+                            is JiraResult.Failed -> r.message
+                        }
+                        jiraChecking = false
+                    }
+                },
+                enabled = !jiraChecking,
+                modifier = Modifier.padding(top = 10.dp)
+            ) {
+                Text(if (jiraChecking) "Проверяю…" else "Проверить связь")
+            }
+            jiraCheck?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }

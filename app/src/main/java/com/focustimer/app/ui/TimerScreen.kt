@@ -52,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -72,12 +74,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focustimer.app.DayTask
+import com.focustimer.app.JiraClient
+import com.focustimer.app.JiraResult
 import com.focustimer.app.MAX_PLAN_ITEMS
 import com.focustimer.app.PlanItem
 import com.focustimer.app.PrefsManager
 import com.focustimer.app.TimerPhase
 import com.focustimer.app.TimerPreset
 import com.focustimer.app.TimerViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun TimerScreen(
@@ -103,6 +108,38 @@ fun TimerScreen(
     var wordHidden by remember { mutableStateOf(prefs.wordSeenDate == todayKey) }
     var showCustomTimer by remember { mutableStateOf(false) }
     var dayTasks by remember { mutableStateOf(prefs.dayTasks(todayKey)) }
+
+    val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
+    var jiraIssues by remember { mutableStateOf(prefs.jiraIssues) }
+    var jiraLoading by remember { mutableStateOf(false) }
+    var jiraError by remember { mutableStateOf<String?>(null) }
+    var jiraSyncedAt by remember { mutableStateOf(prefs.jiraSyncedAtMillis) }
+    val jiraSyncedLabel = if (jiraSyncedAt > 0L) relativeSince(jiraSyncedAt) else null
+
+    fun refreshJira() {
+        if (jiraLoading) return
+        jiraLoading = true
+        jiraError = null
+        scope.launch {
+            when (val result = JiraClient.fetch(prefs.jiraSite, prefs.jiraEmail, prefs.jiraToken, prefs.jiraJql)) {
+                is JiraResult.Ok -> {
+                    prefs.jiraIssues = result.issues
+                    prefs.jiraSyncedAtMillis = System.currentTimeMillis()
+                    jiraIssues = result.issues
+                    jiraSyncedAt = prefs.jiraSyncedAtMillis
+                }
+                is JiraResult.Failed -> jiraError = result.message
+            }
+            jiraLoading = false
+        }
+    }
+
+    // One refresh when the screen opens, so the list is current without a tap; the cached
+    // answer is on screen meanwhile.
+    LaunchedEffect(Unit) {
+        if (prefs.jiraEnabled) refreshJira()
+    }
     val term = remember { wordOfTheDay() }
 
     // The schedule is kept per weekday, so only what belongs to today reaches this screen.
@@ -432,6 +469,31 @@ fun TimerScreen(
                 modifier = Modifier.size(18.dp)
             )
             Text("Весь график по дням", modifier = Modifier.padding(start = 6.dp))
+        }
+
+        if (prefs.jiraEnabled) {
+            Divider(modifier = Modifier.padding(top = 20.dp, bottom = 18.dp))
+            JiraTasks(
+                issues = jiraIssues,
+                loading = jiraLoading,
+                error = jiraError,
+                syncedLabel = jiraSyncedLabel,
+                onRefresh = { refreshJira() },
+                onOpen = { issue ->
+                    uriHandler.openUri("https://${prefs.jiraSite}/browse/${issue.key}")
+                },
+                onAddToDay = { issue ->
+                    val title = "${issue.key} · ${issue.summary}"
+                    // Tapping plus twice should not leave two copies of the same issue.
+                    if (dayTasks.none { it.title == title }) {
+                        prefs.setDayTasks(
+                            todayKey,
+                            dayTasks + DayTask(id = "daytask_${System.currentTimeMillis()}", title = title)
+                        )
+                        dayTasks = prefs.dayTasks(todayKey)
+                    }
+                }
+            )
         }
 
         Divider(modifier = Modifier.padding(top = 20.dp, bottom = 18.dp))
@@ -1037,4 +1099,15 @@ private fun CustomTimerDialog(onDismiss: () -> Unit, onStart: (Int) -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
     )
+}
+
+/** "5 минут назад" style, for how fresh the Jira list is. */
+private fun relativeSince(millis: Long): String {
+    val diff = ((System.currentTimeMillis() - millis) / 1000).coerceAtLeast(0)
+    return when {
+        diff < 60 -> "только что"
+        diff < 3600 -> "${diff / 60} мин назад"
+        diff < 86400 -> "${diff / 3600} ч назад"
+        else -> "${diff / 86400} дн назад"
+    }
 }
