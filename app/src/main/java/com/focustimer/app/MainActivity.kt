@@ -22,17 +22,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.StickyNote2
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.EventNote
 import androidx.compose.material.icons.outlined.StickyNote2
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,17 +63,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.focustimer.app.ui.MoreScreen
 import com.focustimer.app.ui.NotesScreen
+import com.focustimer.app.ui.PlanScreen
 import com.focustimer.app.ui.LifestyleQuestionsScreen
 import com.focustimer.app.ui.OnboardingScreen
 import com.focustimer.app.ui.ScheduleSetupScreen
-import com.focustimer.app.ui.ProfileScreen
 import com.focustimer.app.ui.ProfileSetupScreen
-import com.focustimer.app.ui.RoutineScreen
-import com.focustimer.app.ui.SettingsScreen
 import com.focustimer.app.ui.StatsScreen
 import com.focustimer.app.ui.TimerScreen
-import com.focustimer.app.ui.WeekScreen
 import com.focustimer.app.ui.theme.FocusTimerTheme
 import com.focustimer.app.ui.theme.ThemeState
 
@@ -97,17 +94,19 @@ class MainActivity : ComponentActivity() {
 
 private enum class RootScreen { PROFILE_SETUP, SCHEDULE_SETUP, MAIN }
 
-private enum class OverlayScreen { ROUTINE, WEEK, LIFESTYLE, DETAILS }
+private enum class OverlayScreen { LIFESTYLE, DETAILS }
 
 /** One bottom-bar destination. The filled icon marks the active tab, the outlined one the rest. */
+private const val TAB_PLAN = 1
+
 private data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
 
 private val NAV_ITEMS = listOf(
     NavItem("Сегодня", Icons.Outlined.Timer, Icons.Filled.Timer),
+    NavItem("План", Icons.Outlined.EventNote, Icons.Filled.EventNote),
     NavItem("Заметки", Icons.Outlined.StickyNote2, Icons.Filled.StickyNote2),
-    NavItem("Статистика", Icons.Outlined.BarChart, Icons.Filled.BarChart),
-    NavItem("Настройки", Icons.Outlined.Settings, Icons.Filled.Settings),
-    NavItem("Профиль", Icons.Outlined.Person, Icons.Filled.Person)
+    NavItem("Итоги", Icons.Outlined.BarChart, Icons.Filled.BarChart),
+    NavItem("Ещё", Icons.Outlined.Tune, Icons.Filled.Tune)
 )
 
 @Composable
@@ -192,20 +191,12 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                 title = {
                     Text(
                         when (overlayScreen) {
-                            OverlayScreen.ROUTINE -> "Ритуалы"
-                            OverlayScreen.WEEK -> "Неделя"
                             OverlayScreen.LIFESTYLE -> "Образ жизни"
                             OverlayScreen.DETAILS -> "Подробная анкета"
                             null -> tabs[selectedTab]
                         }
                     )
                 },
-                actions = {
-                    // One destination, so it opens directly instead of through a one-item menu.
-                    IconButton(onClick = { overlayScreen = OverlayScreen.ROUTINE }) {
-                        Icon(Icons.Outlined.Checklist, contentDescription = "Ритуалы")
-                    }
-                }
             )
         },
         bottomBar = {
@@ -245,8 +236,6 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                 )
             }
             when (overlayScreen) {
-                OverlayScreen.ROUTINE -> RoutineScreen(onBack = { overlayScreen = null })
-                OverlayScreen.WEEK -> WeekScreen(onBack = { overlayScreen = null })
                 OverlayScreen.LIFESTYLE -> LifestyleQuestionsScreen(
                     onComplete = { overlayScreen = null }
                 )
@@ -258,12 +247,14 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                 null -> when (selectedTab) {
                     0 -> TimerScreen(
                         viewModel = timerViewModel,
-                        onOpenWeek = { overlayScreen = OverlayScreen.WEEK }
+                        // The week is a tab now, so the link jumps there instead of stacking
+                        // a second way to reach the same screen.
+                        onOpenWeek = { selectedTab = TAB_PLAN }
                     )
-                    1 -> NotesScreen()
-                    2 -> StatsScreen()
-                    3 -> SettingsScreen()
-                    4 -> ProfileScreen(
+                    1 -> PlanScreen()
+                    2 -> NotesScreen()
+                    3 -> StatsScreen()
+                    4 -> MoreScreen(
                         onOpenLifestyle = { overlayScreen = OverlayScreen.LIFESTYLE },
                         onOpenDetails = { overlayScreen = OverlayScreen.DETAILS }
                     )

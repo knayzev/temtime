@@ -43,7 +43,7 @@ import com.focustimer.app.PrefsManager
  * entry shown on every day rather than seven copies.
  */
 @Composable
-fun WeekScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun WeekScreen(onBack: (() -> Unit)? = null, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 
@@ -64,7 +64,7 @@ fun WeekScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 32.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
+            if (onBack != null) IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
             }
             Text(

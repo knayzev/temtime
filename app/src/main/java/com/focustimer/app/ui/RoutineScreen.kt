@@ -105,7 +105,7 @@ private fun greetingFor(userName: String): String {
 }
 
 @Composable
-fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun RoutineScreen(onBack: (() -> Unit)? = null, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
     val todayKey = remember { dateKeyOf(Calendar.getInstance()) }
@@ -205,7 +205,7 @@ fun RoutineScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
+                if (onBack != null) IconButton(onClick = onBack, modifier = Modifier.padding(end = 4.dp)) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
                 }
                 Column {
