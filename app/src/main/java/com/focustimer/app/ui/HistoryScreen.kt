@@ -33,14 +33,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Past sessions and finished plan runs. The day's schedule itself lives on the timer screen. */
+/** Past sessions and finished plan runs; shown as a tab inside Статистика. */
 @Composable
 fun HistoryScreen(modifier: Modifier = Modifier) {
-    HistoryTab(modifier = modifier)
-}
-
-@Composable
-private fun HistoryTab(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
     var planHistory by remember { mutableStateOf(prefs.getPlanHistory()) }

@@ -151,6 +151,28 @@ data class DayTask(
 /** How many one-off tasks a single day may hold. */
 const val MAX_DAY_TASKS = 30
 
+/**
+ * A free-form note. The first line doubles as the heading in the list, so a note needs no
+ * separate title field — one less thing to fill in before writing the thought down.
+ */
+data class Note(
+    val id: String,
+    val text: String,
+    val updatedAtMillis: Long,
+    val pinned: Boolean = false
+) {
+    val heading: String get() = text.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+    val body: String
+        get() = text.lineSequence()
+            .dropWhile { it.isBlank() }
+            .drop(1)
+            .joinToString(" ") { it.trim() }
+            .trim()
+}
+
+/** Plenty for a personal notebook, and keeps the stored blob small. */
+const val MAX_NOTES = 200
+
 /** One Jira issue, cut down to what the day screen shows. */
 data class JiraIssue(
     val key: String,
@@ -725,6 +747,41 @@ class PrefsManager(context: Context) {
         dayTasksRaw = root
     }
 
+    /** Pinned first, then most recently touched — the order the list is shown in. */
+    var notes: List<Note>
+        get() {
+            val raw = prefs.getString(KEY_NOTES, null) ?: return emptyList()
+            return try {
+                val arr = JSONArray(raw)
+                (0 until arr.length()).map { i ->
+                    val o = arr.getJSONObject(i)
+                    Note(
+                        id = o.optString("id", "note_$i"),
+                        text = o.optString("text", ""),
+                        updatedAtMillis = o.optLong("updatedAt", 0L),
+                        pinned = o.optBoolean("pinned", false)
+                    )
+                }.filter { it.text.isNotBlank() }
+                    .sortedWith(compareByDescending<Note> { it.pinned }.thenByDescending { it.updatedAtMillis })
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        set(value) {
+            val arr = JSONArray()
+            value.take(MAX_NOTES).forEach { note ->
+                arr.put(
+                    JSONObject().apply {
+                        put("id", note.id)
+                        put("text", note.text)
+                        put("updatedAt", note.updatedAtMillis)
+                        put("pinned", note.pinned)
+                    }
+                )
+            }
+            prefs.edit().putString(KEY_NOTES, arr.toString()).apply()
+        }
+
     var jiraEnabled: Boolean
         get() = prefs.getBoolean(KEY_JIRA_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_JIRA_ENABLED, value).apply()
@@ -1227,6 +1284,7 @@ class PrefsManager(context: Context) {
         private const val KEY_DAY_SUMMARIES = "day_summaries"
         private const val KEY_PLAN_ITEMS = "plan_items"
         private const val KEY_DAY_TASKS = "day_tasks"
+        private const val KEY_NOTES = "notes"
         private const val KEY_JIRA_ENABLED = "jira_enabled"
         private const val KEY_JIRA_SITE = "jira_site"
         private const val KEY_JIRA_EMAIL = "jira_email"

@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.StickyNote2
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Checklist
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Timer
@@ -64,7 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.focustimer.app.ui.HistoryScreen
+import com.focustimer.app.ui.NotesScreen
 import com.focustimer.app.ui.LifestyleQuestionsScreen
 import com.focustimer.app.ui.OnboardingScreen
 import com.focustimer.app.ui.ScheduleSetupScreen
@@ -104,7 +104,7 @@ private data class NavItem(val label: String, val icon: ImageVector, val selecte
 
 private val NAV_ITEMS = listOf(
     NavItem("Сегодня", Icons.Outlined.Timer, Icons.Filled.Timer),
-    NavItem("История", Icons.Outlined.History, Icons.Filled.History),
+    NavItem("Заметки", Icons.Outlined.StickyNote2, Icons.Filled.StickyNote2),
     NavItem("Статистика", Icons.Outlined.BarChart, Icons.Filled.BarChart),
     NavItem("Настройки", Icons.Outlined.Settings, Icons.Filled.Settings),
     NavItem("Профиль", Icons.Outlined.Person, Icons.Filled.Person)
@@ -260,7 +260,7 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                         viewModel = timerViewModel,
                         onOpenWeek = { overlayScreen = OverlayScreen.WEEK }
                     )
-                    1 -> HistoryScreen()
+                    1 -> NotesScreen()
                     2 -> StatsScreen()
                     3 -> SettingsScreen()
                     4 -> ProfileScreen(
