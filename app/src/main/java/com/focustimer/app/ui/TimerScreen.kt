@@ -193,6 +193,52 @@ fun TimerScreen(
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Asked to sit at the top: it is the first thing read, before the timer.
+        if (!wordHidden) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Слово дня",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            term.word,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            term.meaning,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                    IconButton(onClick = {
+                        prefs.wordSeenDate = todayKey
+                        wordHidden = true
+                    }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Скрыть до завтра",
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+        }
+
         if (state.escalationActive) {
             Row(
                 modifier = Modifier
@@ -552,52 +598,6 @@ fun TimerScreen(
                         },
                         showHeader = false
                     )
-                }
-            }
-        }
-
-        // Read once and dismissed, so it sits under the schedule instead of pushing the timer down.
-        if (!wordHidden) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.tertiaryContainer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.Top,
-                    modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Слово дня",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            term.word,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            term.meaning,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-                    IconButton(onClick = {
-                        prefs.wordSeenDate = todayKey
-                        wordHidden = true
-                    }) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Скрыть до завтра",
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
                 }
             }
         }
