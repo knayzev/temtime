@@ -44,7 +44,8 @@ fun DayTasks(
     onToggle: (DayTask) -> Unit,
     onRemove: (DayTask) -> Unit,
     onAdd: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showHeader: Boolean = true
 ) {
     var draft by remember { mutableStateOf("") }
     val doneCount = tasks.count { it.done }
@@ -57,18 +58,20 @@ fun DayTasks(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text("Задачи на день", style = MaterialTheme.typography.titleMedium)
-            if (tasks.isNotEmpty()) {
-                Text(
-                    "$doneCount/${tasks.size}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        if (showHeader) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text("Задачи на день", style = MaterialTheme.typography.titleMedium)
+                if (tasks.isNotEmpty()) {
+                    Text(
+                        "$doneCount/${tasks.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 

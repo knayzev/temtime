@@ -432,93 +432,129 @@ fun TimerScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        DaySchedule(
-            items = todayItems,
-            doneIds = doneIds,
-            runningId = if (state.phase == TimerPhase.WORK) selectedPlanId else null,
-            nowMinutes = nowMinutesOfDay(),
-            onSelect = { selectPlan(it) },
-            onToggleDone = { item ->
-                val nowDone = !doneIds.contains(item.id)
-                prefs.setPlanItemDone(todayKey, item.id, nowDone)
-                doneIds = prefs.completedPlanIds(todayKey)
-                // A ticked entry should not stay loaded in the timer as if it were still ahead.
-                if (nowDone && selectedPlanId == item.id) selectedPlanId = null
-            },
-            onEdit = { editingItem = it },
-            onAdd = { addingItem = true }
-        )
-        if (planItems.size >= MAX_PLAN_ITEMS) {
-            Text(
-                "Достигнут предел — $MAX_PLAN_ITEMS пунктов на день",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
-
-        TextButton(
-            onClick = onOpenWeek,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        ) {
-            Icon(
-                Icons.Default.CalendarMonth,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Text("Весь график по дням", modifier = Modifier.padding(start = 6.dp))
-        }
-
-        if (prefs.jiraEnabled) {
-            Divider(modifier = Modifier.padding(top = 20.dp, bottom = 18.dp))
-            JiraTasks(
-                issues = jiraIssues,
-                loading = jiraLoading,
-                error = jiraError,
-                syncedLabel = jiraSyncedLabel,
-                onRefresh = { refreshJira() },
-                onOpen = { issue ->
-                    uriHandler.openUri("https://${prefs.jiraSite}/browse/${issue.key}")
-                },
-                onAddToDay = { issue ->
-                    val title = "${issue.key} · ${issue.summary}"
-                    // Tapping plus twice should not leave two copies of the same issue.
-                    if (dayTasks.none { it.title == title }) {
-                        prefs.setDayTasks(
-                            todayKey,
-                            dayTasks + DayTask(id = "daytask_${System.currentTimeMillis()}", title = title)
-                        )
-                        dayTasks = prefs.dayTasks(todayKey)
-                    }
+        val doneToday = todayItems.count { doneIds.contains(it.id) }
+        CollapsibleSection(
+            key = "schedule",
+            title = "Расписание дня",
+            summary = if (todayItems.isEmpty()) "ничего не запланировано"
+            else "$doneToday из ${todayItems.size} · ${formatSpan(todayItems.sumOf { it.minutes })}",
+            action = {
+                TextButton(onClick = onOpenWeek) {
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text("Весь график по дням", modifier = Modifier.padding(start = 6.dp))
                 }
+            }
+        ) {
+            DaySchedule(
+                items = todayItems,
+                doneIds = doneIds,
+                runningId = if (state.phase == TimerPhase.WORK) selectedPlanId else null,
+                nowMinutes = nowMinutesOfDay(),
+                onSelect = { selectPlan(it) },
+                onToggleDone = { item ->
+                    val nowDone = !doneIds.contains(item.id)
+                    prefs.setPlanItemDone(todayKey, item.id, nowDone)
+                    doneIds = prefs.completedPlanIds(todayKey)
+                    // A ticked entry should not stay loaded in the timer as if it were still ahead.
+                    if (nowDone && selectedPlanId == item.id) selectedPlanId = null
+                },
+                onEdit = { editingItem = it },
+                onAdd = { addingItem = true },
+                showHeader = false
             )
+            if (planItems.size >= MAX_PLAN_ITEMS) {
+                Text(
+                    "Достигнут предел — $MAX_PLAN_ITEMS пунктов на день",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
         }
 
-        Divider(modifier = Modifier.padding(top = 20.dp, bottom = 18.dp))
+        Divider(modifier = Modifier.padding(top = 16.dp, bottom = 10.dp))
 
-        DayTasks(
-            tasks = dayTasks,
-            onToggle = { task ->
-                prefs.setDayTasks(
-                    todayKey,
-                    dayTasks.map { if (it.id == task.id) it.copy(done = !it.done) else it }
-                )
-                dayTasks = prefs.dayTasks(todayKey)
-            },
-            onRemove = { task ->
-                prefs.setDayTasks(todayKey, dayTasks.filterNot { it.id == task.id })
-                dayTasks = prefs.dayTasks(todayKey)
-            },
-            onAdd = { title ->
-                prefs.setDayTasks(
-                    todayKey,
-                    dayTasks + DayTask(id = "daytask_${System.currentTimeMillis()}", title = title)
-                )
-                dayTasks = prefs.dayTasks(todayKey)
+        val tasksLeft = dayTasks.count { !it.done }
+        CollapsibleSection(
+            key = "tasks",
+            title = "Дела на сегодня",
+            summary = if (dayTasks.isEmpty()) "список пуст"
+            else "$tasksLeft ${leftWord(tasksLeft)} из ${dayTasks.size}"
+        ) {
+            DayTasks(
+                tasks = dayTasks,
+                onToggle = { task ->
+                    prefs.setDayTasks(
+                        todayKey,
+                        dayTasks.map { if (it.id == task.id) it.copy(done = !it.done) else it }
+                    )
+                    dayTasks = prefs.dayTasks(todayKey)
+                },
+                onRemove = { task ->
+                    prefs.setDayTasks(todayKey, dayTasks.filterNot { it.id == task.id })
+                    dayTasks = prefs.dayTasks(todayKey)
+                },
+                onAdd = { title ->
+                    prefs.setDayTasks(
+                        todayKey,
+                        dayTasks + DayTask(id = "daytask_${System.currentTimeMillis()}", title = title)
+                    )
+                    dayTasks = prefs.dayTasks(todayKey)
+                },
+                showHeader = false
+            )
+
+            if (prefs.jiraEnabled) {
+                // Reference rather than a to-do list, so it starts folded under the tasks it feeds.
+                CollapsibleSection(
+                    key = "jira",
+                    title = "Над чем работаю",
+                    summary = when {
+                        jiraLoading -> "обновляю…"
+                        jiraError != null -> jiraError.orEmpty()
+                        else -> "из Jira · ${jiraIssues.size}" +
+                            (jiraSyncedLabel?.let { " · $it" } ?: "")
+                    },
+                    defaultExpanded = false,
+                    action = {
+                        TextButton(onClick = { refreshJira() }, enabled = !jiraLoading) {
+                            Text(if (jiraLoading) "Обновляю…" else "Обновить")
+                        }
+                    },
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    JiraTasks(
+                        issues = jiraIssues,
+                        loading = jiraLoading,
+                        error = jiraError,
+                        syncedLabel = jiraSyncedLabel,
+                        onRefresh = { refreshJira() },
+                        onOpen = { issue ->
+                            uriHandler.openUri("https://${prefs.jiraSite}/browse/${issue.key}")
+                        },
+                        onAddToDay = { issue ->
+                            val title = "${issue.key} · ${issue.summary}"
+                            // Tapping plus twice should not leave two copies of the same issue.
+                            if (dayTasks.none { it.title == title }) {
+                                prefs.setDayTasks(
+                                    todayKey,
+                                    dayTasks + DayTask(
+                                        id = "daytask_${System.currentTimeMillis()}",
+                                        title = title
+                                    )
+                                )
+                                dayTasks = prefs.dayTasks(todayKey)
+                            }
+                        },
+                        showHeader = false
+                    )
+                }
             }
-        )
+        }
 
         // Read once and dismissed, so it sits under the schedule instead of pushing the timer down.
         if (!wordHidden) {
@@ -1109,5 +1145,16 @@ private fun relativeSince(millis: Long): String {
         diff < 3600 -> "${diff / 60} мин назад"
         diff < 86400 -> "${diff / 3600} ч назад"
         else -> "${diff / 86400} дн назад"
+    }
+}
+
+/** "осталось 3" vs "осталось 1" — the word that follows the count of unfinished tasks. */
+private fun leftWord(n: Int): String {
+    val mod100 = n % 100
+    val mod10 = n % 10
+    return when {
+        mod100 in 11..14 -> "осталось"
+        mod10 == 1 -> "осталась"
+        else -> "осталось"
     }
 }

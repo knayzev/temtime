@@ -38,38 +38,41 @@ fun JiraTasks(
     onRefresh: () -> Unit,
     onOpen: (JiraIssue) -> Unit,
     onAddToDay: (JiraIssue) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showHeader: Boolean = true
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Над чем работаю", style = MaterialTheme.typography.titleMedium)
-                val caption = when {
-                    loading -> "Обновляю…"
-                    error != null -> error
-                    syncedLabel != null -> "Из Jira · $syncedLabel"
-                    else -> "Из Jira"
+        if (showHeader) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Над чем работаю", style = MaterialTheme.typography.titleMedium)
+                    val caption = when {
+                        loading -> "Обновляю…"
+                        error != null -> error
+                        syncedLabel != null -> "Из Jira · $syncedLabel"
+                        else -> "Из Jira"
+                    }
+                    Text(
+                        caption,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (error != null) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                Text(
-                    caption,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (error != null) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (loading) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
-                    modifier = Modifier
-                        .padding(end = 12.dp)
-                        .size(20.dp)
-                )
-            } else {
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Обновить из Jira")
+                if (loading) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(20.dp)
+                    )
+                } else {
+                    IconButton(onClick = onRefresh) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Обновить из Jira")
+                    }
                 }
             }
         }

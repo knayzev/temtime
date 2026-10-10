@@ -75,25 +75,28 @@ fun DaySchedule(
     onEdit: (PlanItem) -> Unit,
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
-    showProgress: Boolean = true
+    showProgress: Boolean = true,
+    showHeader: Boolean = true
 ) {
     val totalMinutes = items.sumOf { it.minutes }
     val doneMinutes = items.filter { doneIds.contains(it.id) }.sumOf { it.minutes }
     val nextId = items.firstOrNull { !doneIds.contains(it.id) }?.id
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text("План на сегодня", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "${doneIds.count { id -> items.any { it.id == id } }}/${items.size} · " +
-                    "${formatSpan(doneMinutes)} из ${formatSpan(totalMinutes)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        if (showHeader) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text("План на сегодня", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "${doneIds.count { id -> items.any { it.id == id } }}/${items.size} · " +
+                        "${formatSpan(doneMinutes)} из ${formatSpan(totalMinutes)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         if (showProgress && items.isNotEmpty()) {

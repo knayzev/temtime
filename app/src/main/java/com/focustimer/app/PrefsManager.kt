@@ -747,6 +747,17 @@ class PrefsManager(context: Context) {
         dayTasksRaw = root
     }
 
+    /**
+     * Whether a collapsible section on the day screen is open. Remembered per section so the
+     * screen comes back the length the user left it.
+     */
+    fun sectionExpanded(key: String, default: Boolean): Boolean =
+        prefs.getBoolean("section_$key", default)
+
+    fun setSectionExpanded(key: String, expanded: Boolean) {
+        prefs.edit().putBoolean("section_$key", expanded).apply()
+    }
+
     /** Pinned first, then most recently touched — the order the list is shown in. */
     var notes: List<Note>
         get() {
