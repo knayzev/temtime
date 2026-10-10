@@ -54,6 +54,9 @@ import com.focustimer.app.ALL_WEEKDAYS
 import com.focustimer.app.PlanItem
 import java.util.Calendar
 
+/** How many upcoming entries the day screen shows before the rest is folded away. */
+private const val COMPACT_VISIBLE = 3
+
 /** Entries offered as one-tap fills in the add dialog, so the quick path is not another long list. */
 private val QUICK_FILL_TITLES = listOf(
     "Завтрак", "Зарядка", "Глубокая работа", "Созвоны", "Обед",
@@ -76,11 +79,22 @@ fun DaySchedule(
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
     showProgress: Boolean = true,
-    showHeader: Boolean = true
+    showHeader: Boolean = true,
+    /**
+     * On the day screen the question is "what now, what next" — a full nine-item day pushed
+     * everything else off the screen. Setup wants the whole list, so it stays opt-in.
+     */
+    compact: Boolean = false
 ) {
     val totalMinutes = items.sumOf { it.minutes }
     val doneMinutes = items.filter { doneIds.contains(it.id) }.sumOf { it.minutes }
     val nextId = items.firstOrNull { !doneIds.contains(it.id) }?.id
+
+    var showAll by remember(items.size) { mutableStateOf(false) }
+    val ahead = items.filter { it.id == runningId || !doneIds.contains(it.id) }
+    val folded = compact && !showAll && ahead.size > COMPACT_VISIBLE
+    val shown = if (folded) ahead.take(COMPACT_VISIBLE) else items
+    val hidden = items.size - shown.size
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (showHeader) {
@@ -137,7 +151,7 @@ fun DaySchedule(
                 }
             }
         } else {
-            items.forEach { item ->
+            shown.forEach { item ->
                 PlanItemRow(
                     item = item,
                     isDone = doneIds.contains(item.id),
@@ -149,6 +163,17 @@ fun DaySchedule(
                     onToggleDone = { onToggleDone(item) },
                     onEdit = { onEdit(item) }
                 )
+            }
+            if (compact && (folded || hidden > 0 || showAll)) {
+                TextButton(
+                    onClick = { showAll = !showAll },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (folded) "Показать весь день · ещё $hidden"
+                        else "Показать только ближайшее"
+                    )
+                }
             }
         }
 

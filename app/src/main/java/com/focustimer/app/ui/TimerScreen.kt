@@ -510,7 +510,8 @@ fun TimerScreen(
                 },
                 onEdit = { editingItem = it },
                 onAdd = { addingItem = true },
-                showHeader = false
+                showHeader = false,
+                compact = true
             )
             if (planItems.size >= MAX_PLAN_ITEMS) {
                 Text(
