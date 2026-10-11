@@ -83,7 +83,7 @@
   .page { max-width: 640px; margin: 0 auto; padding: 12px 20px 30px; }
 
   nav.tabs {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr);
     border-top: 1px solid var(--line); background: var(--paper); flex: none;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -264,14 +264,49 @@
   .toast { position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(76px + env(safe-area-inset-bottom, 0px));
     background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 12px; font-size: 13.5px; z-index: 50; }
-  /* Read once and dismissed, so it sits under the schedule instead of pushing the timer down. */
+  /* Asked to sit at the top: it is the first thing read, before the timer. */
   .word {
     background: var(--blue-soft); color: var(--on-blue-soft); border-radius: 16px;
-    padding: 12px 8px 12px 16px; margin-top: 24px;
+    padding: 12px 8px 12px 16px; margin-bottom: 18px;
   }
   .word .kicker, .word .mini { color: inherit; }
   .word-w { font-weight: 700; font-size: 16px; margin-top: 2px; }
   .empty { text-align: center; padding: 22px 14px; color: var(--muted); }
+
+  /* A block of the day screen that folds away; the head keeps saying what is inside. */
+  .sect { margin-top: 18px; }
+  .sect-head { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0;
+    cursor: pointer; padding: 8px 0; text-align: left; }
+  .sect-head .tx { flex: 1; min-width: 0; }
+  .sect-head b { display: block; font-size: 16px; font-weight: 600; }
+  .sect-head small { font-size: 12px; color: var(--muted); }
+  .sect-body { display: block; }
+
+  .qt { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 2px; margin-top: 16px; }
+  .qt button { flex: none; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .qt button.accent { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  .dayblock { padding-bottom: 16px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  .dayblock:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+  .dayblock h3 { font-size: 16px; font-weight: 600; }
+  .wrow { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: baseline;
+    background: var(--soft); border-radius: 14px; padding: 9px 12px; margin-top: 6px; }
+  .wrow .t { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .daypick { display: flex; gap: 6px; }
+  .daypick button { flex: 1; border: 1px solid var(--ring); background: transparent; color: var(--muted);
+    border-radius: 999px; padding: 8px 0; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .daypick button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  .note { background: var(--soft); border-radius: 18px; padding: 14px 6px 14px 16px; display: flex; gap: 6px; }
+  .note.pin { background: var(--accent-soft); }
+  .note b { display: block; font-size: 15px; font-weight: 600; }
+  .note p { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .note .st { font-size: 12px; color: var(--muted); margin-top: 6px; display: block; }
+  .fab { position: sticky; bottom: 14px; margin-left: auto; margin-top: 14px; width: 56px; height: 56px;
+    border-radius: 18px; border: 0; background: var(--accent); color: var(--on-accent);
+    display: grid; place-items: center; cursor: pointer; box-shadow: var(--shadow); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -289,13 +324,17 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
     Сегодня
   </button>
-  <button data-tab="rituals">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-    Ритуалы
+  <button data-tab="plan">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 9.5h18M7.5 13h5"/></svg>
+    План
+  </button>
+  <button data-tab="notes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9l-6 6H6a2 2 0 0 1-2-2V5Z"/><path d="M20 14h-4a2 2 0 0 0-2 2v4M8 8h8M8 11.5h5"/></svg>
+    Заметки
   </button>
   <button data-tab="stats">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M7 21V10M12 21V4M17 21v-7"/></svg>
-    Статистика
+    Итоги
   </button>
 </nav>
 
@@ -420,6 +459,17 @@ const presetFor = (name) => PROFESSIONS.find((p) => p.name === name) || PROFESSI
 const byTime = (list) => list.slice().sort((a, b) => minsOf(a.time) - minsOf(b.time));
 const nowMinutes = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 
+/** Monday-first, matching how the week is shown. */
+const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7];
+const WEEKDAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+const WEEKDAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+/** Today as 1 = Monday … 7 = Sunday; getDay counts from Sunday, so it is shifted. */
+const todayWeekday = () => ((new Date().getDay() + 6) % 7) + 1;
+const onDay = (p, day) => !Array.isArray(p.days) || p.days.length === 0 || p.days.indexOf(day) >= 0;
+const itemsWord = (n) => plural(n, "занятие", "занятия", "занятий");
+const MAX_TASKS = 30;
+const MAX_NOTES = 200;
+
 /**
  * One term a day, picked from the day number so everyone sees the same one and it changes at
  * midnight. The list is about attention, planning and sleep — the things the app is for.
@@ -454,7 +504,42 @@ const WORDS = [
   ["Расфокус", "Намеренное безделье без экрана, в котором приходят решения."],
   ["Якорение привычки", "Новая привычка цепляется к уже существующей: после кофе — план на день."],
   ["Временной блок", "Дело, которому отдан конкретный отрезок в календаре, а не место в списке."],
-  ["Минимальный шаг", "Версия задачи, настолько маленькая, что отказаться от неё труднее, чем сделать."]
+  ["Минимальный шаг", "Версия задачи, настолько маленькая, что отказаться труднее, чем сделать."],
+  ["Поток", "Состояние, когда сложность задачи совпадает с вашим уровнем: трудно, но посильно."],
+  ["Гиперфокус", "Полная поглощённость делом. Продуктивно, но из неё выпадают еда, вода и время."],
+  ["Съесть лягушку", "Самое неприятное дело — первым с утра, пока оно не съело день само."],
+  ["Правило трёх", "Три главных дела на день. Всё сверх того — бонус, а не провал."],
+  ["Разгрузка головы", "Выписать всё, что крутится в мыслях, чтобы память не держала список."],
+  ["Нулевой входящий", "Разобрать почту до пустоты, а не перечитывать одни и те же письма."],
+  ["Второй мозг", "Внешнее хранилище мыслей и ссылок: помнить должно оно, а не вы."],
+  ["Закон Хика", "Чем больше вариантов, тем дольше выбор. Сокращайте список, а не раздумья."],
+  ["Закон Йеркса — Додсона", "Умеренное напряжение повышает результат, сильное — рушит."],
+  ["Невозвратные затраты", "Потраченное не вернуть. Продолжать ради вложенного — ошибка."],
+  ["Паралич анализа", "Когда обдумывание заменяет действие и решение откладывается бесконечно."],
+  ["Отложенное вознаграждение", "Способность выбрать большее потом вместо меньшего сейчас."],
+  ["Микропривычка", "Действие настолько мелкое, что его нельзя не сделать: одна страница, одно отжимание."],
+  ["Не разрывай цепь", "Отмечайте каждый сделанный день. Длинная цепочка сама не даёт её прервать."],
+  ["Ультрадианный ритм", "Циклы бодрости примерно по 90 минут; к концу цикла внимание закономерно падает."],
+  ["Период полувыведения кофеина", "Около 5 часов: кофе в 16:00 к полуночи ещё наполовину в крови."],
+  ["Синий свет", "Свет экранов вечером сдвигает выработку мелатонина и отодвигает сон."],
+  ["Якорь сна", "Постоянное время подъёма. Оно держит режим крепче, чем постоянное время отбоя."],
+  ["Остаточное внимание", "Часть внимания остаётся на прошлой задаче ещё минуты после переключения."],
+  ["Правило 1-3-5", "На день: одно крупное дело, три средних, пять мелких. Больше не помещается."],
+  ["Лимит незавершённого", "Ограничение на число задач «в работе» одновременно. Меньше начатого — больше законченного."],
+  ["Канбан", "Доска со столбцами «сделать», «в работе», «готово». Видно, где затор."],
+  ["Эффект ИКЕА", "Мы переоцениваем то, во что вложили труд, — и держимся за это дольше нужного."],
+  ["Синдром самозванца", "Ощущение, что успех случаен и вас вот-вот разоблачат. Чаще у тех, кто растёт."],
+  ["Закон Иллича", "После некоторого порога каждый лишний час работы снижает общий результат."],
+  ["Эффект аудитории", "Простое чужое присутствие ускоряет привычные дела и мешает сложным."],
+  ["Ритуал входа", "Одно и то же короткое действие перед работой — сигнал мозгу, что начинается дело."],
+  ["Ритуал выхода", "Явное завершение дня: разбор задач и список на завтра. Без него работа тянется в вечер."],
+  ["Правило одного касания", "Взяли письмо или бумагу — сразу решите судьбу, а не откладывайте «на потом»."],
+  ["Техника 52/17", "52 минуты работы, 17 отдыха. Цифры не магические — важна регулярность пауз."],
+  ["Дедлайн-эффект", "У срока продуктивность взлетает, а качество падает. Ставьте срок раньше настоящего."],
+  ["Планирование по энергии", "Сложное — на часы подъёма сил, рутину — на спад. Время суток важнее длины списка."],
+  ["Пустой календарь", "Свободные окна — не резерв для новых встреч, а место, где делается работа."],
+  ["Усталость от решений", "К концу дня качество выбора падает. Рутинные решения стоит автоматизировать."],
+  ["Правило пяти минут", "Если дело пугает, договоритесь с собой на пять минут. Обычно этого хватает, чтобы начать."]
 ].map(([word, meaning]) => ({ word, meaning }));
 
 function wordOfTheDay() {
@@ -468,14 +553,17 @@ function wordOfTheDay() {
 
 function blankState() {
   return {
-    v: 2,
+    v: 3,
     profile: { gender: "", age: "", weight: "", height: "", profession: "Другое", details: "" },
     onboarded: false,
-    plans: [],              // { id, title, time: "09:00", minutes: 50, comment }
+    plans: [],              // { id, title, time: "09:00", minutes, comment, days:[1..7] }
     done: {},               // dateKey -> [planId]
+    tasks: {},              // dateKey -> [{ id, title, done }] — one-off, does not repeat
+    notes: [],              // { id, text, updatedAt, pinned } — first line is the heading
     rituals: { done: {} },  // dateKey -> [ritualId]
     sessions: [],           // { id, startedAt, seconds, label, kind: 'plan'|'free' }
-    wordSeen: "",           // dateKey of the day's term the user has already dismissed
+    wordSeen: "",
+    sections: {},           // which folded blocks on Сегодня are open
     settings: { restMinutes: 5, freeMinutes: 25, speak: true }
   };
 }
@@ -520,7 +608,8 @@ function setBadge(t) { const el = $("#sync-badge"); if (el) el.textContent = t; 
  * the old items become the plans and the container's name is dropped.
  */
 function migrate(loaded) {
-  if (!loaded || loaded.v === 2) return loaded;
+  // Only the very first shape needs converting; later ones are read as they are.
+  if (!loaded || (loaded.v || 1) >= 2) return loaded;
   const out = blankState();
   out.profile = Object.assign(out.profile, loaded.profile || {});
   out.onboarded = !!loaded.onboarded;
@@ -560,7 +649,13 @@ function adopt(loaded) {
   state.profile = Object.assign(base.profile, data.profile || {});
   state.settings = Object.assign(base.settings, data.settings || {});
   state.rituals = Object.assign(base.rituals, data.rituals || {});
-  state.plans = Array.isArray(data.plans) ? data.plans : [];
+  state.plans = (Array.isArray(data.plans) ? data.plans : [])
+    // Entries saved before the week existed applied to every day.
+    .map((p) => Object.assign({ days: ALL_DAYS.slice() }, p,
+      { days: Array.isArray(p.days) && p.days.length ? p.days : ALL_DAYS.slice() }));
+  state.tasks = data.tasks && typeof data.tasks === "object" ? data.tasks : {};
+  state.notes = Array.isArray(data.notes) ? data.notes : [];
+  state.sections = data.sections && typeof data.sections === "object" ? data.sections : {};
   state.sessions = Array.isArray(data.sessions) ? data.sessions : [];
   state.done = data.done || {};
 }
@@ -593,6 +688,8 @@ async function initStore() {
    ===================================================================== */
 
 const ui = {
+  planTab: "week",
+  showAllPlans: false,
   route: "setup-profile",   // setup-profile | setup-schedule | app
   tab: "today",
   sheet: null,              // { kind, ... }
@@ -632,7 +729,7 @@ function speak(text) {
 const todayKey = () => dayKey(Date.now());
 const doneToday = () => state.done[todayKey()] || [];
 const isDone = (id) => doneToday().indexOf(id) >= 0;
-const todayPlans = () => byTime(state.plans);
+const todayPlans = () => byTime(state.plans.filter((p) => onDay(p, todayWeekday())));
 
 /** The plan the day is currently at: the first unfinished one, by time. */
 function nextPlan() {
@@ -642,6 +739,29 @@ function planAfter(id) {
   const list = todayPlans().filter((p) => !isDone(p.id) || p.id === id);
   const i = list.findIndex((p) => p.id === id);
   return i >= 0 ? list.slice(i + 1).find((p) => !isDone(p.id)) || null : nextPlan();
+}
+
+function dayTasks() { return state.tasks[todayKey()] || []; }
+function setDayTasks(list) {
+  if (list.length) state.tasks[todayKey()] = list; else delete state.tasks[todayKey()];
+  save();
+}
+/** Pinned first, then most recently touched. */
+function sortedNotes() {
+  return state.notes.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt);
+}
+function noteHeading(n) { return (n.text.split("\n").find((l) => l.trim()) || "").trim(); }
+function noteBody(n) {
+  const lines = n.text.split("\n");
+  const i = lines.findIndex((l) => l.trim());
+  return lines.slice(i + 1).join(" ").trim();
+}
+function noteStamp(ms) {
+  const diff = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (diff < 60) return "только что";
+  if (diff < 3600) return Math.floor(diff / 60) + " мин назад";
+  if (diff < 86400) return Math.floor(diff / 3600) + " ч назад";
+  return new Date(ms).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
 function setDone(id, value) {
@@ -839,7 +959,6 @@ function viewToday() {
 
   const term = wordOfTheDay();
   const showWord = state.wordSeen !== todayKey();
-
   const wordCard = showWord ? `<div class="word">
       <div class="row" style="align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
@@ -853,9 +972,41 @@ function viewToday() {
       </div>
     </div>` : "";
 
-  // The timer comes first and the schedule right after it: those two are the screen. What is
-  // set once and then left alone is folded into one line between them.
+  // The day screen answers "what now, what next": the running entry plus the next two, with
+  // the rest a tap away. A nine-item day in full pushed everything else off the screen.
+  const ahead = plans.filter((p) => p.id === t.planId || !isDone(p.id));
+  const folded = !ui.showAllPlans && ahead.length > 3;
+  const shown = folded ? ahead.slice(0, 3) : plans;
+  const hiddenCount = plans.length - shown.length;
+
+  const scheduleBody = plans.length === 0
+    ? `<div class="card empty">
+        <p style="font-weight:700;color:var(--ink)">План на день пуст</p>
+        <p class="small" style="margin-top:4px">Добавьте первый пункт — он появится здесь и запустится в таймере.</p>
+      </div>`
+    : `<div class="progress"><i style="width:${plans.length ? (done.length / plans.length) * 100 : 0}%"></i></div>
+       <div class="stack">${shown.map((p) => renderPlanRow(p, nowM)).join("")}</div>
+       ${(folded || ui.showAllPlans) ? `<button class="btn text wide sm" id="plans-more">${folded ? "Показать весь день · ещё " + hiddenCount : "Показать только ближайшее"}</button>` : ""}`;
+
+  const tasks = dayTasks();
+  const left = tasks.filter((x) => !x.done).length;
+  const tasksBody = `${tasks.length === 0 ? `<p class="small muted">Что нужно успеть сегодня, без времени и таймера.</p>` : ""}
+    <div class="stack" style="margin-top:6px">${tasks.map((x) => `
+      <div class="prow plain${x.done ? " done" : ""}" style="grid-template-columns:auto 1fr auto">
+        <button class="tick" data-ttick="${x.id}" aria-pressed="${x.done}" title="Отметить"><i>${CHECK_SVG}</i></button>
+        <span class="pt">${esc(x.title)}</span>
+        <button class="mini" data-tdel="${x.id}" title="Убрать">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>`).join("")}</div>
+    ${tasks.length < MAX_TASKS ? `<div class="row" style="margin-top:10px">
+      <input type="text" id="task-new" placeholder="Новая задача" style="flex:1">
+      <button class="btn sm" id="task-add">Добавить</button>
+    </div>` : `<p class="small muted" style="margin-top:8px">Предел — ${MAX_TASKS} задач на день.</p>`}`;
+
   return `
+    ${wordCard}
+
     <div class="dial${t.mode === "rest" ? " rest" : ""}">
       <svg viewBox="0 0 200 200" aria-hidden="true">
         <circle class="ring-track" cx="100" cy="100" r="86"></circle>
@@ -891,6 +1042,11 @@ function viewToday() {
       </div>
     </div>
 
+    ${idle ? `<div class="qt">
+      ${[5, 10, 15, 25, 45, 60].map((n) => `<button data-quick="${n}">${n} мин</button>`).join("")}
+      <button class="accent" data-quick="custom">Своё время</button>
+    </div>` : ""}
+
     <div class="settings">
       <button class="settings-head" id="ts-toggle" aria-expanded="${ui.settingsOpen}">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
@@ -903,25 +1059,18 @@ function viewToday() {
           <label class="field" style="flex:1">Отдых, мин<input type="number" inputmode="numeric" id="s-rest" value="${state.settings.restMinutes}" min="1" max="60"></label>
         </div>
         <button class="btn ghost wide sm" id="t-voice">${state.settings.speak ? "🔊 Объявлять следующее за 15 сек" : "🔇 Объявления выключены"}</button>
-        ${idle && next ? `<button class="btn ghost wide sm" id="t-free">Запустить свободный фокус</button>` : ""}
       </div>` : ""}
     </div>
 
-    <div class="day-head">
-      <p class="sec-title">План на сегодня</p>
-      <span class="small muted mono">${done.length}/${plans.length} · ${dur(doneMin)} из ${dur(totalMin)}</span>
-    </div>
-    <div class="progress"><i style="width:${plans.length ? (done.length / plans.length) * 100 : 0}%"></i></div>
+    ${section("schedule", "Расписание дня",
+      plans.length ? done.length + " из " + plans.length + " · " + dur(doneMin) + " из " + dur(totalMin) : "ничего не запланировано",
+      true, scheduleBody,
+      `<button class="btn text sm" id="go-week" style="padding-left:0">Весь график по дням</button>
+       <button class="btn ghost wide sm" style="margin:6px 0 10px" id="add-plan">+ Добавить занятие</button>`)}
 
-    ${plans.length === 0 ? `<div class="card empty">
-        <p style="font-weight:700;color:var(--ink)">План на день пуст</p>
-        <p class="small" style="margin-top:4px">Добавьте первый пункт — он появится здесь и запустится в таймере.</p>
-      </div>` : `<div class="stack">${plans.map((p) => renderPlanRow(p, nowM)).join("")}</div>`}
-
-    <button class="btn ghost wide sm" style="margin-top:12px" id="add-plan">+ Добавить занятие</button>
-    ${plans.length >= MAX_PLANS ? `<p class="small muted" style="margin-top:8px">Достигнут предел — ${MAX_PLANS} пунктов на день.</p>` : ""}
-
-    ${wordCard}
+    ${section("tasks", "Дела на сегодня",
+      tasks.length ? left + " осталось из " + tasks.length : "список пуст",
+      true, tasksBody)}
   `;
 }
 
@@ -1051,6 +1200,15 @@ function viewSheet() {
         <label class="field" style="flex:1">Длительность, мин<input type="number" id="sh-min" value="${s.minutes}" min="1" max="600"></label>
       </div>
       <label class="field">Комментарий<input type="text" id="sh-comment" value="${esc(s.comment || "")}" placeholder="Необязательно"></label>
+      <div>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <p class="kicker">В какие дни</p>
+          <button class="btn text sm" data-days-all>${(s.days || ALL_DAYS).length === 7 ? "Только сегодня" : "Каждый день"}</button>
+        </div>
+        <div class="daypick" style="margin-top:4px">
+          ${WEEKDAY_SHORT.map((lbl, i) => `<button class="${(s.days || ALL_DAYS).indexOf(i + 1) >= 0 ? "on" : ""}" data-day="${i + 1}">${lbl}</button>`).join("")}
+        </div>
+      </div>
       <div class="row" style="justify-content:flex-end">
         ${s.id && !s.draft ? `<button class="btn text danger sm" data-sheet-del>Удалить</button>` : ""}
         <button class="btn text sm" data-sheet-cancel>Отмена</button>
@@ -1058,7 +1216,86 @@ function viewSheet() {
       </div>
     </div></div>`;
   }
+  if (s.kind === "note") {
+    return `<div class="scrim" data-scrim><div class="sheet">
+      <h3>${s.id ? "Заметка" : "Новая заметка"}</h3>
+      <textarea id="sh-note" rows="8" placeholder="Первая строка — заголовок">${esc(s.text || "")}</textarea>
+      <div class="row" style="justify-content:flex-end">
+        ${s.id ? `<button class="btn text danger sm" data-note-del>Удалить</button>` : ""}
+        <button class="btn text sm" data-sheet-cancel>Отмена</button>
+        <button class="btn sm" data-sheet-ok>Сохранить</button>
+      </div>
+    </div></div>`;
+  }
   return "";
+}
+
+/** A block of the day screen that folds away and remembers it. */
+function section(key, title, summary, defaultOpen, body, action) {
+  const open = Object.prototype.hasOwnProperty.call(state.sections, key) ? state.sections[key] : defaultOpen;
+  return `<div class="sect">
+    <button class="sect-head" data-section="${key}" aria-expanded="${open}">
+      <span class="tx"><b>${esc(title)}</b><small>${esc(summary)}</small></span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)"><path d="${open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"}"/></svg>
+    </button>
+    ${open ? (action || "") + `<div class="sect-body">${body}</div>` : ""}
+  </div>`;
+}
+
+function viewPlan() {
+  const sub = ui.planTab || "week";
+  return `
+    <div class="row" style="gap:8px;margin-bottom:4px">
+      <button class="btn ${sub === "week" ? "" : "ghost"} sm" data-plantab="week">Неделя</button>
+      <button class="btn ${sub === "rituals" ? "" : "ghost"} sm" data-plantab="rituals">Ритуалы</button>
+    </div>
+    ${sub === "week" ? viewWeek() : viewRituals()}`;
+}
+
+function viewWeek() {
+  const today = todayWeekday();
+  return `
+    <p class="small muted" style="margin:10px 0 16px">У каждого дня недели свой список дел. Пустой день заполняется в один тап — и повторяется каждую неделю.</p>
+    ${WEEKDAY_NAMES.map((name, i) => {
+      const day = i + 1;
+      const items = byTime(state.plans.filter((p) => onDay(p, day)));
+      const total = items.reduce((a, p) => a + p.minutes, 0);
+      return `<div class="dayblock">
+        <div class="row" style="justify-content:space-between;align-items:baseline">
+          <h3>${name}${day === today ? ` <span class="tag">сегодня</span>` : ""}</h3>
+          <span class="small muted">${items.length ? items.length + " " + itemsWord(items.length) + " · " + dur(total) : "ничего не запланировано"}</span>
+        </div>
+        ${items.map((p) => `<button class="wrow body-btn" data-editplan="${p.id}" style="width:100%;text-align:left">
+            <span class="t">${p.time}</span>
+            <span class="pt">${esc(p.title)}<small>${p.minutes} мин${(p.days || ALL_DAYS).length === 7 ? " · каждый день" : ""}</small></span>
+            <span></span>
+          </button>`).join("")}
+        <button class="btn ghost wide sm" style="margin-top:10px" data-addday="${day}">${items.length ? "Добавить в " + name.toLowerCase() : "Создать список дел на день"}</button>
+      </div>`;
+    }).join("")}`;
+}
+
+function viewNotes() {
+  const notes = sortedNotes();
+  return `
+    ${notes.length === 0 ? `<div class="card grey">
+      <p style="font-weight:600">Заметок пока нет</p>
+      <p class="small muted" style="margin-top:4px">Мысли, решения, всё, что не дело со сроком. Первая строка станет заголовком.</p>
+    </div>` : ""}
+    <div class="stack">${notes.map((n) => `
+      <div class="note${n.pinned ? " pin" : ""}">
+        <button class="body-btn" data-note="${n.id}" style="flex:1;text-align:left">
+          <b>${esc(noteHeading(n) || "Без заголовка")}</b>
+          ${noteBody(n) ? `<p>${esc(noteBody(n))}</p>` : ""}
+          <span class="st">${noteStamp(n.updatedAt)}</span>
+        </button>
+        <button class="mini" data-pin="${n.id}" title="${n.pinned ? "Открепить" : "Закрепить"}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${n.pinned ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 3h6l-1 6 4 3v2h-5v7l-1 1-1-1v-7H6v-2l4-3-1-6Z"/></svg>
+        </button>
+      </div>`).join("")}</div>
+    <button class="fab" id="note-new" title="Новая заметка">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>`;
 }
 
 /* =====================================================================
@@ -1075,8 +1312,9 @@ function render() {
   else {
     showTabs = true;
     if (ui.tab === "today") { html = viewToday(); heading = "Сегодня"; }
-    else if (ui.tab === "rituals") { html = viewRituals(); heading = "Ритуалы"; }
-    else { html = viewStats(); heading = "Статистика"; }
+    else if (ui.tab === "plan") { html = viewPlan(); heading = "План"; }
+    else if (ui.tab === "notes") { html = viewNotes(); heading = "Заметки"; }
+    else { html = viewStats(); heading = "Итоги"; }
   }
 
   view.innerHTML = html + viewSheet() + (ui.toast ? `<div class="toast">${esc(ui.toast)}</div>` : "");
@@ -1155,10 +1393,91 @@ document.addEventListener("click", (ev) => {
     return;
   }
 
+  // Folded blocks on Сегодня remember their state between visits.
+  if (d.section) {
+    const open = Object.prototype.hasOwnProperty.call(state.sections, d.section)
+      ? state.sections[d.section] : true;
+    state.sections[d.section] = !open;
+    save(); render(); return;
+  }
+  if (d.plantab) { ui.planTab = d.plantab; render(); return; }
+  if (d.quick) {
+    if (d.quick === "custom") {
+      const raw = window.prompt("Сколько минут?", String(state.settings.freeMinutes));
+      const n = Math.max(1, parseInt(raw, 10) || 0);
+      if (!n) return;
+      state.settings.freeMinutes = n;
+      save();
+    } else {
+      state.settings.freeMinutes = parseInt(d.quick, 10);
+      save();
+    }
+    selectFree();
+    ui.timer.running = true;
+    ui.timer.startedAt = Date.now();
+    ui.timer.endsAt = Date.now() + ui.timer.secondsLeft * 1000;
+    if (state.settings.speak) speak(ui.timer.label);
+    render();
+    return;
+  }
+  // A day's own button means that day, not the whole week.
+  if (d.addday) {
+    const day = parseInt(d.addday, 10);
+    const mine = byTime(state.plans.filter((p) => onDay(p, day)));
+    const last = mine[mine.length - 1];
+    ui.sheet = {
+      kind: "plan", id: null, title: "",
+      time: hhmm(last ? Math.min(minsOf(last.time) + last.minutes, 23 * 60 + 30) : 9 * 60),
+      minutes: 30, comment: "", days: [day]
+    };
+    render(); return;
+  }
+  if (d.day) {
+    const n = parseInt(d.day, 10);
+    const cur = (ui.sheet.days || ALL_DAYS).slice();
+    const i = cur.indexOf(n);
+    // Never leave an entry with no day: the last one stays on.
+    if (i >= 0) { if (cur.length > 1) cur.splice(i, 1); } else { cur.push(n); }
+    ui.sheet.days = cur;
+    render(); return;
+  }
+  if (el.hasAttribute("data-days-all")) {
+    ui.sheet.days = (ui.sheet.days || ALL_DAYS).length === 7 ? [todayWeekday()] : ALL_DAYS.slice();
+    render(); return;
+  }
+  if (d.ttick) {
+    setDayTasks(dayTasks().map((x) => (x.id === d.ttick ? Object.assign({}, x, { done: !x.done }) : x)));
+    render(); return;
+  }
+  if (d.tdel) { setDayTasks(dayTasks().filter((x) => x.id !== d.tdel)); render(); return; }
+  if (d.note) {
+    const n = state.notes.find((x) => x.id === d.note);
+    ui.sheet = { kind: "note", id: n.id, text: n.text };
+    render(); return;
+  }
+  if (d.pin) {
+    state.notes = state.notes.map((n) => (n.id === d.pin ? Object.assign({}, n, { pinned: !n.pinned }) : n));
+    save(); render(); return;
+  }
+  if (el.hasAttribute("data-note-del")) {
+    state.notes = state.notes.filter((n) => n.id !== ui.sheet.id);
+    ui.sheet = null; save(); render(); return;
+  }
+
   if (d.tab) { ui.tab = d.tab; render(); return; }
   if (d.gender) { state.profile.gender = d.gender; save(); render(); return; }
 
   switch (el.id) {
+    case "plans-more": ui.showAllPlans = !ui.showAllPlans; render(); return;
+    case "go-week": ui.tab = "plan"; ui.planTab = "week"; render(); return;
+    case "note-new": ui.sheet = { kind: "note", id: null, text: "" }; render(); return;
+    case "task-add": {
+      const input = $("#task-new");
+      const title = (input.value || "").trim();
+      if (!title) { input.focus(); return; }
+      setDayTasks(dayTasks().concat([{ id: "t_" + Date.now(), title: title, done: false }]));
+      render(); return;
+    }
     case "to-schedule": buildDraftFromProfession(); ui.route = "setup-schedule"; render(); return;
     case "toggle-hints": ui.showHints = !ui.showHints; render(); return;
     case "add-draft": ui.sheet = { kind: "plan", id: null, draft: true, title: "", time: "12:00", minutes: 30, comment: "" }; render(); return;
@@ -1238,13 +1557,24 @@ document.addEventListener("click", (ev) => {
 
 function commitSheet() {
   const s = ui.sheet;
+  if (s.kind === "note") {
+    const text = ($("#sh-note").value || "").trim();
+    if (!text) { $("#sh-note").focus(); return; }
+    if (s.id) {
+      state.notes = state.notes.map((n) => (n.id === s.id ? Object.assign({}, n, { text, updatedAt: Date.now() }) : n));
+    } else if (state.notes.length < MAX_NOTES) {
+      state.notes = state.notes.concat([{ id: "n_" + Date.now(), text, updatedAt: Date.now(), pinned: false }]);
+    }
+    ui.sheet = null; save(); render(); return;
+  }
   const title = ($("#sh-title").value || "").trim();
   const time = $("#sh-time").value || "12:00";
   const minutes = Math.max(1, parseInt($("#sh-min").value, 10) || 30);
   const comment = ($("#sh-comment").value || "").trim();
   if (!title) { $("#sh-title").focus(); return; }
 
-  const record = { id: s.id || "p_" + Date.now(), title, time, minutes, comment };
+  const days = (s.days && s.days.length ? s.days : ALL_DAYS).slice().sort((a, b) => a - b);
+  const record = { id: s.id || "p_" + Date.now(), title, time, minutes, comment, days };
 
   if (s.draft) {
     ui.draft = s.id ? ui.draft.map((p) => (p.id === s.id ? record : p)) : ui.draft.concat([record]);
@@ -1257,6 +1587,15 @@ function commitSheet() {
   ui.sheet = null;
   render();
 }
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter" || ev.target.id !== "task-new") return;
+  ev.preventDefault();
+  const title = (ev.target.value || "").trim();
+  if (!title) return;
+  setDayTasks(dayTasks().concat([{ id: "t_" + Date.now(), title: title, done: false }]));
+  render();
+});
 
 document.addEventListener("input", (ev) => {
   const v = ev.target.value;
