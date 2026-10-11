@@ -793,6 +793,45 @@ class PrefsManager(context: Context) {
             prefs.edit().putString(KEY_NOTES, arr.toString()).apply()
         }
 
+    var alarmEnabled: Boolean
+        get() = prefs.getBoolean(KEY_ALARM_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_ALARM_ENABLED, value).apply()
+
+    /** When it rings, as "HH:MM". */
+    var alarmTime: String
+        get() = prefs.getString(KEY_ALARM_TIME, "07:00") ?: "07:00"
+        set(value) = prefs.edit().putString(KEY_ALARM_TIME, value).apply()
+
+    /** Which weekdays it rings on, 1 = Monday … 7 = Sunday. */
+    var alarmDays: Set<Int>
+        get() {
+            val raw = prefs.getString(KEY_ALARM_DAYS, null) ?: return ALL_WEEKDAYS
+            return try {
+                val arr = JSONArray(raw)
+                val set = (0 until arr.length()).map { arr.getInt(it) }.toSet()
+                if (set.isEmpty()) ALL_WEEKDAYS else set
+            } catch (_: Exception) {
+                ALL_WEEKDAYS
+            }
+        }
+        set(value) {
+            val use = if (value.isEmpty()) ALL_WEEKDAYS else value
+            prefs.edit().putString(KEY_ALARM_DAYS, JSONArray(use.sorted()).toString()).apply()
+        }
+
+    /** Whether the alarm reads the day out loud once it rings. */
+    var alarmSpeaks: Boolean
+        get() = prefs.getBoolean(KEY_ALARM_SPEAKS, true)
+        set(value) = prefs.edit().putBoolean(KEY_ALARM_SPEAKS, value).apply()
+
+    var alarmSound: Boolean
+        get() = prefs.getBoolean(KEY_ALARM_SOUND, true)
+        set(value) = prefs.edit().putBoolean(KEY_ALARM_SOUND, value).apply()
+
+    var alarmSnoozeMinutes: Int
+        get() = prefs.getInt(KEY_ALARM_SNOOZE, 10)
+        set(value) = prefs.edit().putInt(KEY_ALARM_SNOOZE, value.coerceIn(1, 60)).apply()
+
     var jiraEnabled: Boolean
         get() = prefs.getBoolean(KEY_JIRA_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_JIRA_ENABLED, value).apply()
@@ -1296,6 +1335,12 @@ class PrefsManager(context: Context) {
         private const val KEY_PLAN_ITEMS = "plan_items"
         private const val KEY_DAY_TASKS = "day_tasks"
         private const val KEY_NOTES = "notes"
+        private const val KEY_ALARM_ENABLED = "alarm_enabled"
+        private const val KEY_ALARM_TIME = "alarm_time"
+        private const val KEY_ALARM_DAYS = "alarm_days"
+        private const val KEY_ALARM_SPEAKS = "alarm_speaks"
+        private const val KEY_ALARM_SOUND = "alarm_sound"
+        private const val KEY_ALARM_SNOOZE = "alarm_snooze"
         private const val KEY_JIRA_ENABLED = "jira_enabled"
         private const val KEY_JIRA_SITE = "jira_site"
         private const val KEY_JIRA_EMAIL = "jira_email"

@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -38,16 +41,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.focustimer.app.AlarmScheduler
 import com.focustimer.app.JiraClient
 import com.focustimer.app.JiraResult
 import com.focustimer.app.PrefsManager
 import com.focustimer.app.ui.theme.ThemeState
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
@@ -84,6 +93,13 @@ private fun GeneralSettingsTab() {
     var soundEnabled by remember { mutableStateOf(prefs.soundEnabled) }
     var vibrationEnabled by remember { mutableStateOf(prefs.vibrationEnabled) }
     var keepScreenOn by remember { mutableStateOf(prefs.keepScreenOn) }
+    var alarmEnabled by remember { mutableStateOf(prefs.alarmEnabled) }
+    var alarmTime by remember { mutableStateOf(prefs.alarmTime) }
+    var alarmDays by remember { mutableStateOf(prefs.alarmDays) }
+    var alarmSpeaks by remember { mutableStateOf(prefs.alarmSpeaks) }
+    var alarmSound by remember { mutableStateOf(prefs.alarmSound) }
+    var alarmSnooze by remember { mutableStateOf(prefs.alarmSnoozeMinutes) }
+    val exactAllowed = remember { AlarmScheduler.canBeExact(context) }
     var jiraEnabled by remember { mutableStateOf(prefs.jiraEnabled) }
     var jiraSite by remember { mutableStateOf(prefs.jiraSite) }
     var jiraEmail by remember { mutableStateOf(prefs.jiraEmail) }
@@ -318,6 +334,103 @@ private fun GeneralSettingsTab() {
                         .padding(bottom = 12.dp)
                 )
             }
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+        Text("Будильник", style = MaterialTheme.typography.titleMedium)
+        SettingRow("Будить и читать план на день", alarmEnabled) {
+            alarmEnabled = it
+            prefs.alarmEnabled = it
+            AlarmScheduler.reschedule(context)
+        }
+        if (alarmEnabled) {
+            TimePickerRow(
+                label = "Во сколько будить",
+                timeText = alarmTime,
+                onTimeChange = {
+                    alarmTime = it
+                    prefs.alarmTime = it
+                    AlarmScheduler.reschedule(context)
+                }
+            )
+            Text(
+                "В какие дни",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp, bottom = 6.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                WEEKDAY_SHORT.forEachIndexed { index, short ->
+                    val day = index + 1
+                    val on = alarmDays.contains(day)
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = if (on) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(999.dp))
+                            .clickable {
+                                // An alarm with no day would never ring, so the last one stays.
+                                val next = if (on) alarmDays - day else alarmDays + day
+                                if (next.isNotEmpty()) {
+                                    alarmDays = next
+                                    prefs.alarmDays = next
+                                    AlarmScheduler.reschedule(context)
+                                }
+                            }
+                    ) {
+                        Text(
+                            short,
+                            style = MaterialTheme.typography.labelMedium,
+                            textAlign = TextAlign.Center,
+                            color = if (on) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+            SettingRow("Читать план вслух", alarmSpeaks) {
+                alarmSpeaks = it
+                prefs.alarmSpeaks = it
+            }
+            SettingRow("Звонок", alarmSound) {
+                alarmSound = it
+                prefs.alarmSound = it
+            }
+            MinutesRow(
+                label = "Отложить на, мин",
+                value = alarmSnooze,
+                onChange = { alarmSnooze = it; prefs.alarmSnoozeMinutes = it }
+            )
+            val nextAt = remember(alarmEnabled, alarmTime, alarmDays) {
+                AlarmScheduler.nextTrigger(alarmTime, alarmDays)
+            }
+            Text(
+                buildString {
+                    if (nextAt != null) {
+                        append("Следующий звонок: ")
+                        append(
+                            SimpleDateFormat("EEEE, d MMMM, HH:mm", Locale("ru"))
+                                .format(Date(nextAt))
+                        )
+                    }
+                    if (!exactAllowed) {
+                        append("\nТочное время запрещено в системе — звонок может опоздать до 10 минут. ")
+                        append("Разрешите «Будильники и напоминания» в настройках приложения.")
+                    }
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (exactAllowed) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         Divider(modifier = Modifier.padding(vertical = 16.dp))
@@ -574,5 +687,28 @@ private fun SettingRow(label: String, checked: Boolean, onCheckedChange: (Boolea
     ) {
         Text(label, modifier = Modifier.padding(end = 16.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+/** A small number with plus and minus, for values nobody wants to type on a phone. */
+@Composable
+private fun MinutesRow(label: String, value: Int, onChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { onChange((value - 5).coerceAtLeast(1)) }) { Text("−") }
+            Text(
+                value.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            TextButton(onClick = { onChange((value + 5).coerceAtMost(60)) }) { Text("+") }
+        }
     }
 }

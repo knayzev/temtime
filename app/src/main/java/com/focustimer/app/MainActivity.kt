@@ -83,6 +83,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Lifts the old plan containers into the flat schedule; a no-op after the first run.
         PrefsManager(this).migratePlansIfNeeded()
+        // Alarms do not survive a reinstall or a cleared schedule, so re-book on every start.
+        AlarmScheduler.reschedule(this)
         ThemeState.dynamicColor = PrefsManager(this).dynamicColorEnabled
         setContent {
             FocusTimerTheme(dynamicColor = ThemeState.dynamicColor) {
