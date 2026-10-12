@@ -100,6 +100,7 @@ private enum class OverlayScreen { LIFESTYLE, DETAILS }
 
 /** One bottom-bar destination. The filled icon marks the active tab, the outlined one the rest. */
 private const val TAB_PLAN = 1
+private const val TAB_NOTES = 2
 
 private data class NavItem(val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
 
@@ -251,7 +252,9 @@ fun AppRoot(timerViewModel: TimerViewModel) {
                         viewModel = timerViewModel,
                         // The week is a tab now, so the link jumps there instead of stacking
                         // a second way to reach the same screen.
-                        onOpenWeek = { selectedTab = TAB_PLAN }
+                        onOpenWeek = { selectedTab = TAB_PLAN },
+                        // Tapping the day-intent card goes where it is written.
+                        onOpenNotes = { selectedTab = TAB_NOTES }
                     )
                     1 -> PlanScreen()
                     2 -> NotesScreen()

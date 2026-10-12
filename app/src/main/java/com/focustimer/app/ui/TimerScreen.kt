@@ -88,6 +88,7 @@ import kotlinx.coroutines.launch
 fun TimerScreen(
     viewModel: TimerViewModel,
     onOpenWeek: () -> Unit = {},
+    onOpenNotes: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -108,6 +109,8 @@ fun TimerScreen(
     var wordHidden by remember { mutableStateOf(prefs.wordSeenDate == todayKey) }
     var showCustomTimer by remember { mutableStateOf(false) }
     var dayTasks by remember { mutableStateOf(prefs.dayTasks(todayKey)) }
+    val dayFocus = prefs.dayFocus(todayKey)
+    val dayGoal = prefs.dayGoal(todayKey)
 
     val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
@@ -193,6 +196,32 @@ fun TimerScreen(
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // What the day is for, above the clock that measures it. Only what has been set shows.
+        if (dayFocus.isNotBlank() || dayGoal.isNotBlank()) {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable(onClick = onOpenNotes)
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                    if (dayGoal.isNotBlank()) {
+                        IntentLine("Цель на сегодня", dayGoal)
+                    }
+                    if (dayFocus.isNotBlank()) {
+                        IntentLine(
+                            "Дело дня",
+                            dayFocus,
+                            modifier = Modifier.padding(top = if (dayGoal.isNotBlank()) 10.dp else 0.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Asked to sit at the top: it is the first thing read, before the timer.
         if (!wordHidden) {
             Surface(
@@ -1157,5 +1186,23 @@ private fun leftWord(n: Int): String {
         mod100 in 11..14 -> "осталось"
         mod10 == 1 -> "осталась"
         else -> "осталось"
+    }
+}
+
+/** One labelled line of the day's intent card. */
+@Composable
+private fun IntentLine(label: String, text: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
     }
 }

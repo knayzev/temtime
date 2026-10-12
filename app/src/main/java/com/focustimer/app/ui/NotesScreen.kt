@@ -22,11 +22,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,6 +51,67 @@ import java.util.Locale
  */
 @Composable
 fun NotesScreen(modifier: Modifier = Modifier) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val prefs = remember { PrefsManager(context) }
+    val today = remember { dayStamp() }
+
+    // Re-read on every save so the card on Сегодня and the history below stay in step.
+    var focus by remember { mutableStateOf(prefs.dayFocus(today)) }
+    var goal by remember { mutableStateOf(prefs.dayGoal(today)) }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTab) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("Заметки") }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("Дело дня") }
+            )
+            Tab(
+                selected = selectedTab == 2,
+                onClick = { selectedTab = 2 },
+                text = { Text("Цель") }
+            )
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (selectedTab) {
+                0 -> NotesList()
+                1 -> DayIntentTab(
+                    title = "Дело дня",
+                    hint = "Одно дело, ради которого день можно считать удавшимся.",
+                    placeholder = "Например, дописать и отправить спецификацию",
+                    today = today,
+                    saved = focus,
+                    history = prefs.dayFocusHistory(),
+                    onSave = { text ->
+                        prefs.setDayFocus(today, text)
+                        focus = prefs.dayFocus(today)
+                    }
+                )
+                2 -> DayIntentTab(
+                    title = "Цель на сегодня",
+                    hint = "Чем день должен закончиться — результат, а не список задач.",
+                    placeholder = "Например, закрыть вопрос с подпиской",
+                    today = today,
+                    saved = goal,
+                    history = prefs.dayGoalHistory(),
+                    onSave = { text ->
+                        prefs.setDayGoal(today, text)
+                        goal = prefs.dayGoal(today)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotesList(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember { PrefsManager(context) }
 

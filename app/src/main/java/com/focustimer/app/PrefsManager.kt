@@ -793,6 +793,38 @@ class PrefsManager(context: Context) {
             prefs.edit().putString(KEY_NOTES, arr.toString()).apply()
         }
 
+    private fun dayTextRaw(key: String): JSONObject {
+        val raw = prefs.getString(key, null) ?: return JSONObject()
+        return try { JSONObject(raw) } catch (_: Exception) { JSONObject() }
+    }
+
+    private fun writeDayText(key: String, date: String, text: String) {
+        val root = dayTextRaw(key)
+        if (text.isBlank()) root.remove(date) else root.put(date, text.trim())
+        // Keeps the map from growing for ever; four months is more history than anyone reads.
+        val cutoff = dateKeyDaysAgo(120)
+        root.keys().asSequence().filter { it < cutoff }.toList().forEach { root.remove(it) }
+        prefs.edit().putString(key, root.toString()).apply()
+    }
+
+    private fun readDayTexts(key: String): List<Pair<String, String>> =
+        dayTextRaw(key).let { root ->
+            root.keys().asSequence()
+                .mapNotNull { date -> root.optString(date, "").ifBlank { null }?.let { date to it } }
+                .sortedByDescending { it.first }
+                .toList()
+        }
+
+    /** The one thing that matters today. One per date, like a diary entry rather than a list. */
+    fun dayFocus(date: String): String = dayTextRaw(KEY_DAY_FOCUS).optString(date, "")
+    fun setDayFocus(date: String, text: String) = writeDayText(KEY_DAY_FOCUS, date, text)
+    fun dayFocusHistory(): List<Pair<String, String>> = readDayTexts(KEY_DAY_FOCUS)
+
+    /** What today is for — the outcome, as opposed to the task. */
+    fun dayGoal(date: String): String = dayTextRaw(KEY_DAY_GOAL).optString(date, "")
+    fun setDayGoal(date: String, text: String) = writeDayText(KEY_DAY_GOAL, date, text)
+    fun dayGoalHistory(): List<Pair<String, String>> = readDayTexts(KEY_DAY_GOAL)
+
     var alarmEnabled: Boolean
         get() = prefs.getBoolean(KEY_ALARM_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_ALARM_ENABLED, value).apply()
@@ -1335,6 +1367,8 @@ class PrefsManager(context: Context) {
         private const val KEY_PLAN_ITEMS = "plan_items"
         private const val KEY_DAY_TASKS = "day_tasks"
         private const val KEY_NOTES = "notes"
+        private const val KEY_DAY_FOCUS = "day_focus"
+        private const val KEY_DAY_GOAL = "day_goal"
         private const val KEY_ALARM_ENABLED = "alarm_enabled"
         private const val KEY_ALARM_TIME = "alarm_time"
         private const val KEY_ALARM_DAYS = "alarm_days"
